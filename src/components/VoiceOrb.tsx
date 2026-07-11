@@ -43,6 +43,7 @@ type RealtimeMessage = {
   delta?: string
   item_id?: string
   response_id?: string
+  call_id?: string
   content_index?: number
   action?: 'show' | 'close'
   heading?: string
@@ -52,7 +53,7 @@ type RealtimeMessage = {
   favorites?: FavoriteListing[]
   url?: string
   analysis?: ProductAnalysis
-  phase?: 'started' | 'completed'
+  phase?: 'waiting' | 'started' | 'completed'
   tool?: string
   response?: { id?: string }
 }
@@ -90,12 +91,22 @@ export function VoiceOrb() {
   const activeResponseRef = useRef<string | null>(null)
   const interruptedResponsesRef = useRef(new Set<string>())
   const toolActiveRef = useRef(false)
+  const pendingToolCallRef = useRef<string | null>(null)
   const sessionReadyRef = useRef(false)
   const runningRef = useRef(false)
   const mountedRef = useRef(true)
 
   const setLevel = (level: number) => {
     orbRef.current?.style.setProperty('--level', String(Math.min(1, level)))
+  }
+
+  const signalToolReady = () => {
+    const callId = pendingToolCallRef.current
+    const socket = socketRef.current
+    if (!callId || playbackSourcesRef.current.size > 0 || socket?.readyState !== WebSocket.OPEN)
+      return
+    pendingToolCallRef.current = null
+    socket.send(JSON.stringify({ type: 'markit.tool.ready', call_id: callId }))
   }
 
   const haltPlayback = (socket?: WebSocket, truncate = false) => {
@@ -149,6 +160,7 @@ export function VoiceOrb() {
     activeResponseRef.current = null
     interruptedResponsesRef.current.clear()
     toolActiveRef.current = false
+    pendingToolCallRef.current = null
     sessionReadyRef.current = false
     setLevel(0)
     if (updateState && mountedRef.current) {
@@ -214,7 +226,8 @@ export function VoiceOrb() {
       ) {
         activeOutputRef.current = null
         setLevel(0.08)
-        if (runningRef.current) setState('listening')
+        if (runningRef.current && !pendingToolCallRef.current) setState('listening')
+        signalToolReady()
       }
     })
   }
@@ -323,6 +336,7 @@ export function VoiceOrb() {
             })
           }
         } else if (message.type === 'input_audio_buffer.speech_started') {
+          if (toolActiveRef.current || pendingToolCallRef.current) return
           const responseId = activeOutputRef.current?.responseId ?? activeResponseRef.current
           if (responseId) interruptedResponsesRef.current.add(responseId)
           haltPlayback(socket, true)
@@ -334,12 +348,16 @@ export function VoiceOrb() {
           else if (message.status === 'thinking') setState('thinking')
           else if (message.status === 'search-error') setState('search-error')
         } else if (message.type === 'markit.tool') {
-          toolActiveRef.current = message.phase === 'started'
-          if (message.phase === 'started') {
-            haltPlayback()
+          if (message.phase === 'waiting' && message.call_id) {
+            pendingToolCallRef.current = message.call_id
             if (socket.readyState === WebSocket.OPEN) {
               socket.send(JSON.stringify({ type: 'input_audio_buffer.clear' }))
             }
+            window.setTimeout(signalToolReady, 120)
+          } else {
+            toolActiveRef.current = message.phase === 'started'
+          }
+          if (message.phase === 'started') {
             setState(message.tool === 'search_products' ? 'searching' : 'thinking')
           }
         } else if (message.type === 'markit.products') {
@@ -397,7 +415,7 @@ export function VoiceOrb() {
         for (const sample of input) sum += sample * sample
         const level = Math.sqrt(sum / input.length)
         if (playbackSourcesRef.current.size === 0) setLevel(Math.min(1, level * 7))
-        if (toolActiveRef.current) return
+        if (toolActiveRef.current || pendingToolCallRef.current) return
         if (socket.readyState !== WebSocket.OPEN) return
         const pcm = floatToPcm16(resample(input, context.sampleRate))
         socket.send(

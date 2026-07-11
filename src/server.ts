@@ -225,12 +225,31 @@ async function realtimeSocket(
     visibleProductUrls: [],
     analysisGeneration: 0,
   }
+  const toolReadyResolvers = new Map<string, () => void>()
+  const waitForToolReady = (callId: string) =>
+    new Promise<void>((resolve) => {
+      const finish = () => {
+        clearTimeout(timeout)
+        toolReadyResolvers.delete(callId)
+        resolve()
+      }
+      const timeout = setTimeout(finish, 10_000)
+      toolReadyResolvers.set(callId, finish)
+    })
 
   server.addEventListener('message', (event) => {
     if (typeof event.data !== 'string') return
     if (upstream.readyState !== WebSocket.OPEN) return
     try {
-      const message = JSON.parse(event.data) as { type?: string; session?: Record<string, unknown> }
+      const message = JSON.parse(event.data) as {
+        type?: string
+        session?: Record<string, unknown>
+        call_id?: string
+      }
+      if (message.type === 'markit.tool.ready' && message.call_id) {
+        toolReadyResolvers.get(message.call_id)?.()
+        return
+      }
       if (message.type === 'session.update') {
         upstream.send(
           JSON.stringify({
@@ -264,10 +283,19 @@ async function realtimeSocket(
         !handledToolCalls.has(message.call_id)
       ) {
         handledToolCalls.add(message.call_id)
+        const ready = waitForToolReady(message.call_id)
+        sendJson(server, {
+          type: 'markit.tool',
+          phase: 'waiting',
+          tool: message.name,
+          call_id: message.call_id,
+        })
         context.waitUntil(
-          executeAgentTool(message, env, upstream, server, productState, context, {
-            userId: authSession?.user.id ?? null,
-          }),
+          ready.then(() =>
+            executeAgentTool(message, env, upstream, server, productState, context, {
+              userId: authSession?.user.id ?? null,
+            }),
+          ),
         )
       }
     } catch {}
@@ -283,6 +311,8 @@ async function realtimeSocket(
     if (server.readyState === WebSocket.OPEN) server.close(event.code, event.reason)
   })
   server.addEventListener('close', () => {
+    for (const resolve of toolReadyResolvers.values()) resolve()
+    toolReadyResolvers.clear()
     if (upstream.readyState < WebSocket.CLOSING) upstream.close(1000, 'Client disconnected')
   })
 
