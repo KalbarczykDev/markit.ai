@@ -33,10 +33,6 @@ function renderSlide(nextIndex, options = {}) {
   })
 
   const activeSlide = slides[currentIndex]
-  deckShell.classList.toggle(
-    'on-dark',
-    activeSlide.classList.contains('slide-dark') || activeSlide.classList.contains('slide-finale'),
-  )
   const title =
     activeSlide.querySelector('h1, h2')?.textContent.trim() || `Slide ${currentIndex + 1}`
 
