@@ -1108,8 +1108,22 @@ body {
 }
 
 .account-chevron {
+  display: grid;
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: none;
+  place-items: center;
   color: var(--text-muted);
-  font-size: 0.68rem;
+  transition: transform 160ms ease;
+}
+
+.account-chevron svg {
+  width: 100%;
+  height: 100%;
+}
+
+.account-trigger[data-pressed='true'] .account-chevron {
+  transform: rotate(180deg);
 }
 
 .account-popover {
