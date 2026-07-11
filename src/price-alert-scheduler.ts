@@ -108,7 +108,7 @@ async function researchPrices(
       instructions: PRICE_ALERT_INSTRUCTIONS,
       tools: [{ type: 'web_search', search_context_size: 'medium' }],
       tool_choice: 'required',
-      reasoning: { effort: 'medium' },
+      reasoning: { effort: 'none' },
       store: false,
       input: JSON.stringify(listings.map(({ id, title, url }) => ({ id, title, productUrl: url }))),
       text: {

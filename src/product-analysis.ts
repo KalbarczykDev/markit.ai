@@ -249,7 +249,7 @@ async function orchestrateAnalyses(
       instructions: ANALYSIS_SYSTEM_PROMPT,
       input: JSON.stringify({ context, listings: products.map(listingEvidence) }),
       tools: [{ type: 'web_search', search_context_size: 'medium' }],
-      reasoning: { effort: 'medium' },
+      reasoning: { effort: 'none' },
       multi_agent: { enabled: true, max_concurrent_subagents: products.length },
       text: {
         format: {
