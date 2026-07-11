@@ -1,4 +1,4 @@
-import { Card, Drawer, Link, Meter } from '@heroui/react'
+import { Card, Disclosure, Drawer, Link, Meter } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
 import type { ProductAnalysis, ProductCardData } from '@/product-types'
@@ -8,6 +8,79 @@ const RELIABILITY_COLOR = {
   moderate: 'default',
   limited: 'warning',
 } as const
+
+function formatListedDate(published: string | undefined): string | null {
+  if (!published) return null
+  const date = new Date(published)
+  if (Number.isNaN(date.getTime())) return null
+  return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(date)
+}
+
+function ProductDetails({
+  product,
+  analysis,
+}: {
+  product: ProductCardData
+  analysis: ProductAnalysis | undefined
+}) {
+  const listedDate = formatListedDate(product.publishedDate)
+  const hasChecks = analysis?.status === 'complete' && analysis.checks.length > 0
+
+  return (
+    <Disclosure className="product-details">
+      <Disclosure.Heading className="product-details-heading">
+        <Disclosure.Trigger className="product-details-trigger">
+          View details
+          <Disclosure.Indicator />
+        </Disclosure.Trigger>
+      </Disclosure.Heading>
+      <Disclosure.Content>
+        <Disclosure.Body className="product-details-body">
+          {product.highlights.length > 0 ? (
+            <section>
+              <span className="product-details-kicker">Highlights</span>
+              <ul className="product-highlight-list">
+                {product.highlights.map((highlight) => (
+                  <li key={highlight}>{highlight}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {hasChecks ? (
+            <section>
+              <span className="product-details-kicker">Independent checks · {analysis.model}</span>
+              {analysis.summary ? (
+                <p className="product-details-summary">{analysis.summary}</p>
+              ) : null}
+              <ul className="product-check-list">
+                {analysis.checks.map((check) => (
+                  <li key={check.id} data-verdict={check.verdict}>
+                    <strong>{check.label}</strong>
+                    <span>{check.note}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {product.sellerReliability.basis.length > 0 ? (
+            <section>
+              <span className="product-details-kicker">Reliability evidence</span>
+              <ul className="product-evidence-list">
+                {product.sellerReliability.basis.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {listedDate ? <p className="product-details-meta">Listed {listedDate}</p> : null}
+        </Disclosure.Body>
+      </Disclosure.Content>
+    </Disclosure>
+  )
+}
 
 function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(false)
@@ -115,6 +188,7 @@ function ProductCards({
               </div>
             </Card.Content>
             <AnalysisChecks analysis={analyses[product.url]} />
+            <ProductDetails product={product} analysis={analyses[product.url]} />
             <Card.Footer className="product-footer">
               <div
                 className="seller-reliability"
