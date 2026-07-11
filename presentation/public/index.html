@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d0e12" />
+    <meta
+      name="description"
+      content="Markit.ai — a voice-first product research assistant. Project presentation."
+    />
+    <title>Markit.ai — Project Presentation</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/deck.js" defer></script>
+  </head>
+  <body>
+    <div class="deck-shell">
+      <header class="deck-header">
+        <a class="wordmark" href="#1" aria-label="Markit.ai, first slide">
+          <span class="wordmark-mark" aria-hidden="true"></span>
+          <span>markit.ai</span>
+        </a>
+        <div class="header-actions">
+          <span class="deck-label">Project story · July 2026</span>
+          <button class="icon-button" id="fullscreen" type="button" aria-label="Enter fullscreen">
+            <svg class="expand-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+            </svg>
+            <svg class="collapse-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="slides" id="slides">
+        <section
+          class="slide slide-cover"
+          aria-labelledby="slide-1-title"
+          data-chapter="Introduction"
+        >
+          <div class="cover-copy reveal">
+            <p class="eyebrow">Voice-first product intelligence</p>
+            <h1 id="slide-1-title">Ask naturally.<br /><span>Choose confidently.</span></h1>
+            <p class="lede">
+              Markit turns the messy work of product research into one grounded, real-time
+              conversation.
+            </p>
+          </div>
+          <div class="hero-visual reveal reveal-late" aria-hidden="true">
+            <div class="signal signal-one"></div>
+            <div class="signal signal-two"></div>
+            <div class="signal signal-three"></div>
+            <div class="orb orb-large"><span></span></div>
+            <p class="visual-caption">One interface.<br />A world of products.</p>
+          </div>
+          <div class="cover-foot reveal reveal-later">
+            <span>Realtime voice assistant</span>
+            <span class="hairline"></span>
+            <span>Built on Cloudflare</span>
+          </div>
+        </section>
+
+        <section
+          class="slide"
+          aria-labelledby="slide-2-title"
+          data-chapter="The opportunity"
+          hidden
+        >
+          <div class="slide-heading reveal">
+            <p class="eyebrow">01 · The opportunity</p>
+            <h2 id="slide-2-title">Shopping has more data.<br /><span>Not more clarity.</span></h2>
+          </div>
+          <div class="tension-grid reveal reveal-late">
+            <article class="tension-card muted-card">
+              <p class="card-index">Today</p>
+              <h3>The research maze</h3>
+              <ul class="friction-list">
+                <li><span>01</span>Fragmented retailer tabs</li>
+                <li><span>02</span>Conflicting prices and claims</li>
+                <li><span>03</span>Filters that miss real intent</li>
+              </ul>
+            </article>
+            <div class="turn-arrow" aria-hidden="true">
+              <svg viewBox="0 0 64 32"><path d="M2 16h56M45 3l13 13-13 13" /></svg>
+            </div>
+            <article class="tension-card accent-card">
+              <p class="card-index">With Markit</p>
+              <h3>One informed conversation</h3>
+              <p>
+                Say what matters in your own words. Markit checks current product data, compares the
+                useful differences, and answers out loud.
+              </p>
+            </article>
+          </div>
+          <p class="bottom-note reveal reveal-later">
+            The interface gets quieter. The decision gets clearer.
+          </p>
+        </section>
+
+        <section
+          class="slide slide-product"
+          aria-labelledby="slide-3-title"
+          data-chapter="The product"
+          hidden
+        >
+          <div class="product-copy reveal">
+            <p class="eyebrow">02 · The product</p>
+            <h2 id="slide-3-title">The entire experience<br />is <span>one invitation.</span></h2>
+            <p class="lede">
+              No dashboards. No prompt boxes. A responsive orb makes the system feel present while
+              keeping attention on the conversation.
+            </p>
+            <div class="state-row" aria-label="Voice assistant states">
+              <span>Listening</span><i></i><span>Searching</span><i></i><span>Speaking</span>
+            </div>
+          </div>
+          <div class="orb-stage reveal reveal-late" aria-hidden="true">
+            <div class="orb-echo echo-one"></div>
+            <div class="orb-echo echo-two"></div>
+            <div class="orb orb-xlarge"><span></span></div>
+            <div class="status-pill"><b></b>Listening</div>
+          </div>
+        </section>
+
+        <section class="slide" aria-labelledby="slide-4-title" data-chapter="The experience" hidden>
+          <div class="slide-heading compact-heading reveal">
+            <p class="eyebrow">03 · The experience</p>
+            <h2 id="slide-4-title">
+              From intent to an answer<br /><span>without breaking flow.</span>
+            </h2>
+          </div>
+          <ol class="journey reveal reveal-late">
+            <li>
+              <span class="journey-number">01</span>
+              <div class="journey-icon voice-lines" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <h3>Ask</h3>
+              <p>“Find quiet headphones for long flights under $350.”</p>
+            </li>
+            <li>
+              <span class="journey-number">02</span>
+              <div class="journey-icon search-glyph" aria-hidden="true"></div>
+              <h3>Verify</h3>
+              <p>Live search checks products, prices, sellers, and source context.</p>
+            </li>
+            <li>
+              <span class="journey-number">03</span>
+              <div class="journey-icon compare-glyph" aria-hidden="true"><i></i><i></i><i></i></div>
+              <h3>Distill</h3>
+              <p>The model isolates the few differences that matter to the request.</p>
+            </li>
+            <li>
+              <span class="journey-number">04</span>
+              <div class="journey-icon response-glyph" aria-hidden="true"></div>
+              <h3>Respond</h3>
+              <p>A concise spoken recommendation keeps the conversation moving.</p>
+            </li>
+          </ol>
+          <p class="bottom-note reveal reveal-later">
+            Interrupt at any moment. Markit stops, listens, and adapts.
+          </p>
+        </section>
+
+        <section
+          class="slide slide-dark"
+          aria-labelledby="slide-5-title"
+          data-chapter="Architecture"
+          hidden
+        >
+          <div class="slide-heading compact-heading reveal">
+            <p class="eyebrow">04 · Realtime architecture</p>
+            <h2 id="slide-5-title">
+              A short path from<br /><span>voice to verified answer.</span>
+            </h2>
+          </div>
+          <div class="architecture reveal reveal-late">
+            <div class="arch-node client-node">
+              <span class="node-label">Browser</span>
+              <strong>24 kHz PCM16</strong>
+              <small>Capture + playback</small>
+            </div>
+            <div class="arch-connection"><span>WebSocket</span><i></i></div>
+            <div class="arch-node worker-node">
+              <span class="node-label">Cloudflare Worker</span>
+              <strong>Same-origin proxy</strong>
+              <small>Secrets stay server-side</small>
+            </div>
+            <div class="arch-split">
+              <div class="split-line split-top"></div>
+              <div class="split-line split-bottom"></div>
+            </div>
+            <div class="arch-destinations">
+              <div class="arch-node model-node">
+                <span class="node-label">OpenAI</span>
+                <strong>gpt-realtime-2.1</strong>
+                <small>Semantic VAD + audio</small>
+              </div>
+              <div class="arch-node data-node">
+                <span class="node-label">Product search</span>
+                <strong>Current web data</strong>
+                <small>Grounded tool results</small>
+              </div>
+            </div>
+          </div>
+          <div class="tech-strip reveal reveal-later" aria-label="Technology stack">
+            <span>React 19</span><span>TanStack Start</span><span>Vite 8</span
+            ><span>Cloudflare Workers</span>
+          </div>
+        </section>
+
+        <section class="slide" aria-labelledby="slide-6-title" data-chapter="Trust" hidden>
+          <div class="trust-layout">
+            <div class="trust-copy reveal">
+              <p class="eyebrow">05 · Trust by design</p>
+              <h2 id="slide-6-title">Current facts,<br /><span>or no claim.</span></h2>
+              <p class="lede">
+                Markit does not rely on model memory for commerce facts. Product questions trigger
+                live search before the assistant answers.
+              </p>
+            </div>
+            <blockquote class="principle-card reveal reveal-late">
+              <span class="quote-mark">“</span>
+              <p>
+                Never invent a product, price, stock status, seller, specification, review, or URL.
+              </p>
+              <footer>Core grounding policy</footer>
+            </blockquote>
+          </div>
+          <div class="trust-rules reveal reveal-later">
+            <div>
+              <b>01</b><span><strong>Search first</strong> on every current product claim</span>
+            </div>
+            <div>
+              <b>02</b
+              ><span><strong>Name sources</strong> for the facts that shape a decision</span>
+            </div>
+            <div>
+              <b>03</b><span><strong>Say what is unknown</strong> when evidence is incomplete</span>
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="slide slide-engineering"
+          aria-labelledby="slide-7-title"
+          data-chapter="Engineering"
+          hidden
+        >
+          <div class="slide-heading compact-heading reveal">
+            <p class="eyebrow">06 · Built for natural turn-taking</p>
+            <h2 id="slide-7-title">
+              Realtime is not enough.<br /><span>It has to feel responsive.</span>
+            </h2>
+          </div>
+          <div class="engineering-grid reveal reveal-late">
+            <article>
+              <div class="feature-symbol interrupt-symbol" aria-hidden="true"><i></i><i></i></div>
+              <h3>True interruption</h3>
+              <p>
+                Speech start stops every queued source immediately and truncates the model’s spoken
+                turn.
+              </p>
+            </article>
+            <article>
+              <div class="feature-symbol queue-symbol" aria-hidden="true">
+                <i></i><i></i><i></i>
+              </div>
+              <h3>One active response</h3>
+              <p>
+                Late deltas are ignored, preventing interrupted responses from leaking back into
+                playback.
+              </p>
+            </article>
+            <article>
+              <div class="feature-symbol vad-symbol" aria-hidden="true">
+                <i></i><i></i><i></i><i></i>
+              </div>
+              <h3>Semantic turn detection</h3>
+              <p>
+                The session recognizes conversational intent instead of depending on a fixed silence
+                timer.
+              </p>
+            </article>
+          </div>
+          <div class="engineering-note reveal reveal-later">
+            <span>Design principle</span>
+            <p>The assistant should yield as naturally as a thoughtful person would.</p>
+          </div>
+        </section>
+
+        <section class="slide" aria-labelledby="slide-8-title" data-chapter="Progress" hidden>
+          <div class="slide-heading compact-heading reveal">
+            <p class="eyebrow">07 · Where we are</p>
+            <h2 id="slide-8-title">The core loop is<br /><span>working end to end.</span></h2>
+          </div>
+          <div class="progress-board reveal reveal-late">
+            <div class="progress-column shipped">
+              <p class="column-label"><i></i>Built now</p>
+              <ul>
+                <li>Realtime voice session</li>
+                <li>Live product-search tool</li>
+                <li>Grounded response policy</li>
+                <li>Barge-in and queue control</li>
+                <li>Responsive single-orb interface</li>
+                <li>Cloudflare Worker deployment</li>
+              </ul>
+            </div>
+            <div class="progress-column learning">
+              <p class="column-label"><i></i>Ready to learn</p>
+              <ul>
+                <li>Which shopping missions repeat?</li>
+                <li>What builds confidence fastest?</li>
+                <li>When does voice need a visual handoff?</li>
+                <li>Which source signals matter most?</li>
+              </ul>
+            </div>
+          </div>
+          <p class="bottom-note reveal reveal-later">
+            We have the product spine. The next phase is evidence.
+          </p>
+        </section>
+
+        <section
+          class="slide slide-roadmap"
+          aria-labelledby="slide-9-title"
+          data-chapter="Next"
+          hidden
+        >
+          <div class="slide-heading compact-heading reveal">
+            <p class="eyebrow">08 · What comes next</p>
+            <h2 id="slide-9-title">Move from capable<br />to <span>indispensable.</span></h2>
+          </div>
+          <div class="roadmap reveal reveal-late">
+            <article>
+              <span class="phase">Now</span>
+              <div class="roadmap-line"><i></i></div>
+              <h3>Validate the loop</h3>
+              <p>
+                Test real shopping missions, answer quality, latency, and interruption behavior.
+              </p>
+            </article>
+            <article>
+              <span class="phase">Next</span>
+              <div class="roadmap-line"><i></i></div>
+              <h3>Deepen decisions</h3>
+              <p>
+                Add richer comparison structure, preference memory, and transparent visual sources.
+              </p>
+            </article>
+            <article>
+              <span class="phase">Then</span>
+              <div class="roadmap-line"><i></i></div>
+              <h3>Close the journey</h3>
+              <p>
+                Create useful handoffs from spoken recommendation to saved shortlist and retailer.
+              </p>
+            </article>
+          </div>
+          <div class="north-star reveal reveal-later">
+            <span>North star</span>
+            <p>Help someone reach a confident choice in one conversation.</p>
+          </div>
+        </section>
+
+        <section
+          class="slide slide-finale"
+          aria-labelledby="slide-10-title"
+          data-chapter="Close"
+          hidden
+        >
+          <div class="finale-orb reveal" aria-hidden="true">
+            <div class="orb orb-medium"><span></span></div>
+          </div>
+          <div class="finale-copy reveal reveal-late">
+            <p class="eyebrow">Markit.ai</p>
+            <h2 id="slide-10-title">Less searching.<br /><span>Better choosing.</span></h2>
+            <p>Commerce intelligence, at the speed of conversation.</p>
+          </div>
+          <div class="finale-tag reveal reveal-later">
+            <span>Realtime</span><i></i><span>Grounded</span><i></i><span>Human</span>
+          </div>
+        </section>
+      </main>
+
+      <footer class="deck-controls">
+        <div class="progress-cluster">
+          <span class="slide-count"
+            ><b id="current-slide">01</b> / <span id="total-slides">10</span></span
+          >
+          <progress
+            id="deck-progress"
+            value="1"
+            max="10"
+            aria-label="Presentation progress"
+          ></progress>
+          <span class="chapter-name" id="chapter-name">Introduction</span>
+        </div>
+        <nav class="nav-buttons" aria-label="Slide navigation">
+          <button id="previous" type="button" aria-label="Previous slide">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
+            <span>Back</span>
+          </button>
+          <button id="next" class="next-button" type="button" aria-label="Next slide">
+            <span>Next</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+          </button>
+        </nav>
+      </footer>
+      <p class="sr-only" id="slide-announcement" aria-live="polite"></p>
+    </div>
+  </body>
+</html>
