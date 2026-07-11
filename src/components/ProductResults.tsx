@@ -58,7 +58,31 @@ function ProductCards({ products }: { products: ProductCardData[] }) {
                 </Card.Description>
               ) : null}
             </Card.Header>
+            <Card.Content className="product-offer-details">
+              <div data-verified={Boolean(product.discount)}>
+                <span>Discount</span>
+                <p>{product.discount || 'No verified discount found'}</p>
+              </div>
+              <div data-verified={Boolean(product.shipping)}>
+                <span>Delivery</span>
+                <p>{product.shipping || 'Cost not found in source'}</p>
+              </div>
+            </Card.Content>
             <Card.Footer className="product-footer">
+              <div
+                className="seller-reliability"
+                data-level={product.sellerReliability.label}
+                title={product.sellerReliability.basis.join(' • ')}
+              >
+                <div className="seller-reliability-row">
+                  <span>Seller reliability</span>
+                  <strong>{product.sellerReliability.score}/100</strong>
+                </div>
+                <div className="seller-reliability-track" aria-hidden="true">
+                  <i style={{ width: `${product.sellerReliability.score}%` }} />
+                </div>
+                <small>{product.sellerReliability.label} evidence score</small>
+              </div>
               <Link
                 href={product.url}
                 target="_blank"

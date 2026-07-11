@@ -52,7 +52,9 @@ Use `bun oxlint --type-aware` as the source of truth for linting and type analys
 - Use Tailwind v4 and the design tokens in `src/index.css`.
 - The primary interface is a voice orb plus a compact live agent-status indicator. Product cards are the only secondary surface: desktop results open in the right-hand panel and shift the orb left; viewports below 900px must use a controlled HeroUI v3 bottom `Drawer`.
 - Voice transport uses the same-origin `/api/realtime` WebSocket proxy to OpenAI's `gpt-realtime-2.1` model. Keep the API key server-side as the `OPENAI_API_KEY` Worker secret.
-- `src/product-agent.ts` owns the server-enforced ecommerce system prompt, AI SDK v7 tool definitions, input validation, and Exa result sanitization. Current product claims must be grounded in `search_products` results.
+- `src/product-agent.ts` owns the server-enforced ecommerce system prompt, AI SDK v7 tool definitions, input validation, and Exa result sanitization. Current product claims, discounts, delivery costs, and seller-reliability evidence must be grounded in `search_products` results.
+- Discovery is intentionally restrained: ask at most one high-impact missing constraint before the first search (for example shoe size, apparel size, compatibility, or destination). If the shopper says to proceed or has no preference, search immediately and do not repeat the question.
+- Seller reliability is a transparent evidence-completeness heuristic, not a certification. Cards show the score at the end with its evidence level; never represent it as guaranteed trustworthiness.
 - The model alone opens, updates, and closes product results through `control_product_display`. The client reacts to `markit.products` events; do not automatically show search results or add a separate manual panel toggle.
 - Product presentation uses HeroUI v3 compound `Card`, `Link`, and controlled `Drawer` APIs. Shared card data is typed in `src/product-types.ts`; desktop/mobile rendering lives in `src/components/ProductResults.tsx`.
 - The Worker injects the trusted prompt and tools into every `session.update`; never trust browser-supplied instructions or tool definitions.
