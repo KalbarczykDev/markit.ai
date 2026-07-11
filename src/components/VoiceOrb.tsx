@@ -83,6 +83,7 @@ export function VoiceOrb() {
   const activeResponseRef = useRef<string | null>(null)
   const interruptedResponsesRef = useRef(new Set<string>())
   const toolActiveRef = useRef(false)
+  const sessionReadyRef = useRef(false)
   const runningRef = useRef(false)
   const mountedRef = useRef(true)
 
@@ -141,6 +142,7 @@ export function VoiceOrb() {
     activeResponseRef.current = null
     interruptedResponsesRef.current.clear()
     toolActiveRef.current = false
+    sessionReadyRef.current = false
     setLevel(0)
     if (updateState && mountedRef.current) {
       setProductDisplay({ isOpen: false, heading: 'Current picks', products: [] })
@@ -253,7 +255,6 @@ export function VoiceOrb() {
 
       socket.addEventListener('open', () => {
         if (!runningRef.current || socketRef.current !== socket) return
-        setState('listening')
         socket.send(
           JSON.stringify({
             type: 'session.update',
@@ -283,7 +284,10 @@ export function VoiceOrb() {
         if (typeof event.data !== 'string' || socketRef.current !== socket) return
         const message = JSON.parse(event.data) as RealtimeMessage
 
-        if (message.type === 'response.created') {
+        if (message.type === 'session.updated') {
+          sessionReadyRef.current = true
+          setState('listening')
+        } else if (message.type === 'response.created') {
           const responseId = message.response?.id
           if (responseId && activeResponseRef.current && activeResponseRef.current !== responseId) {
             haltPlayback()
@@ -389,7 +393,7 @@ export function VoiceOrb() {
       })
 
       processor.addEventListener('audioprocess', (event) => {
-        if (!runningRef.current || socketRef.current !== socket) return
+        if (!runningRef.current || !sessionReadyRef.current || socketRef.current !== socket) return
         const input = event.inputBuffer.getChannelData(0)
         let sum = 0
         for (const sample of input) sum += sample * sample
