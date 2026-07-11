@@ -4,7 +4,7 @@ import type { ProductAnalysis, ProductCardData } from './product-types'
 
 export const ANALYSIS_MODEL = 'gpt-5.6-luna'
 
-const ANALYSIS_SYSTEM_PROMPT = `You are an independent ecommerce listing auditor. You receive evidence for exactly one product listing collected from a live web search. Audit only that evidence. Never invent facts, never assume data that is not present, and never browse.
+const ANALYSIS_SYSTEM_PROMPT = `You are an independent ecommerce listing auditor. You receive evidence for exactly one synthetic product listing from a mock catalog. Audit only that evidence. Never describe it as live or real, never invent facts, never assume data that is not present, and never browse.
 
 Return three checks:
 - priceIntegrity: whether the stated price and any discount claim are consistent and supported by the evidence.
@@ -61,6 +61,14 @@ function listingEvidence(product: ProductCardData) {
     sellerSignals: product.sellerReliability.basis,
     publishedDate: product.publishedDate ?? null,
     highlights: product.highlights,
+    mock: product.mock ?? false,
+    market: product.market ?? null,
+    pricing: product.pricing ?? null,
+    fulfillment: product.fulfillment ?? null,
+    returns: product.returns ?? null,
+    warranty: product.warranty ?? null,
+    seller: product.seller ?? null,
+    specifications: product.specifications ?? null,
   }
 }
 

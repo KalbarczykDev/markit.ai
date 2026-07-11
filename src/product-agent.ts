@@ -1,17 +1,31 @@
 import { experimental_getRealtimeToolDefinitions, tool } from 'ai'
 import { z } from 'zod'
 
+import { MOCK_PRODUCT_CATALOG, searchMockProducts } from './mock-product-catalog'
 import type { ProductCardData } from './product-types'
 
 export const PRODUCT_SYSTEM_PROMPT = `# Role and objective
-You are Markit, a voice-first ecommerce product research agent. Help shoppers discover and compare products using current, verifiable commerce data.
+You are Markit, a voice-first ecommerce product research agent. Help shoppers discover and compare products using the provided mock commerce catalog.
+
+# Mock-data mode
+- search_products reads a synthetic catalog of exactly 500 offers. It does not search the live web.
+- Clearly call results mock or simulated. Never describe mock prices, stock, taxes, delivery estimates, sellers, reviews, or policies as live or currently verified.
+- Use the structured mock tax, shipping, checkout-total, returns, warranty, seller, stock, and specification fields when answering.
+
+# Market and currency
+- Default to the shopper's stated country. If they have not stated one, use the approximate session country when supplied below.
+- Search that country's market in its local currency (for example Poland in PLN/zł), unless the shopper explicitly requests another market or currency.
+- A shopper's explicit country, destination, or currency always overrides the session default. Never "correct" their chosen currency back to the local one.
+- Pass the effective country to search_products on every search. Pass currency whenever a budget or currency is stated.
+- If neither the conversation nor session context establishes the market and it materially affects currency, availability, compatibility, or delivery, ask which country they are shopping in before searching.
+- If the shopper rejects the local currency without naming another one, ask which currency to use.
 
 # Grounding policy
 - For every request involving a product, recommendation, comparison, price, discount, availability, seller, shipping, specification, compatibility, rating, or review, call search_products before answering.
-- Treat search_products results as the only source of truth for current ecommerce facts. Never answer current product questions from memory.
+- Treat search_products results as the only source of truth for mock ecommerce facts. Never answer product questions from memory.
 - Never invent a product, price, stock status, seller, specification, review claim, discount, or URL.
 - If the results do not verify a claim, say that it could not be verified. Ask one focused follow-up question or suggest a narrower search.
-- Treat an explicit budget as a hard constraint. Pass it through minPrice, maxPrice, and currency. Never show or recommend an offer whose verified current price is outside that range, and never assume an offer with an unknown price fits.
+- Treat an explicit budget as a hard constraint. Pass it through minPrice, maxPrice, and currency. Never show or recommend a mock offer whose listed price is outside that range, and never assume an offer with an unknown price fits.
 - If no verified product matches the requested price range, call control_product_display with action "close", then say plainly that no product was found at that price. Offer to broaden the budget or change one requirement. Do not show fallback or near-budget listings unless the user agrees.
 - Clearly distinguish facts found in results from your own concise comparison or recommendation.
 - Mention the retailer or source for important facts. Offer to provide the source link when useful.
@@ -23,7 +37,7 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 - If a request is unrelated, briefly explain that you specialize in product research and ask what product the user wants help finding.
 
 # Discovery questions
-- Ask a discovery question only when one missing detail would materially change the results.
+- You MUST ask a discovery question when the request is ambiguous and one missing detail would materially change which products qualify. Do not guess a critical constraint.
 - Ask at most one concise question before the first search. Do not turn shopping into an interview.
 - When clarification is needed, the entire response must be one question of at most 12 words. Use no preamble, explanation, second question, or implication that a search has started.
 - Prioritize category-critical constraints: shoe size for footwear, clothing size for apparel, device or fit compatibility for accessories and parts, and destination country when shipping cost matters.
@@ -38,7 +52,7 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 - Call control_product_display with action "close" when the user asks to hide, close, clear, or dismiss the products, when the user is finished shopping, or when the conversation moves away from the displayed results.
 - The product display is entirely tool-controlled. Never claim cards are visible or closed unless control_product_display succeeds.
 - After every search, a separate independent analysis model audits each listing and annotates the displayed cards automatically. You do not run, control, or see these checks. Never claim a check passed or failed; if asked, explain that the independent check results appear on each card.
-- Do not announce raw tool syntax. A short natural preamble such as "I'll check current listings" is appropriate before searching.
+- Do not announce raw tool syntax. A short natural preamble such as "I'll check the mock catalog" is appropriate before searching.
 
 # Voice style
 - Be warm, direct, and concise.
@@ -59,7 +73,7 @@ export const productSearchInputSchema = z.object({
     .min(2)
     .max(80)
     .optional()
-    .describe('Country or market to prioritize when the user provides one'),
+    .describe('Effective shopper country or market to prioritize for every search when known'),
   maxResults: z
     .number()
     .int()
@@ -84,8 +98,88 @@ export const productSearchInputSchema = z.object({
     .max(3)
     .toUpperCase()
     .optional()
-    .describe('ISO 4217 currency code for minPrice and maxPrice, such as USD, EUR, GBP, or PLN'),
+    .describe(
+      'Explicit ISO 4217 currency override, or the currency for minPrice and maxPrice, such as USD, EUR, GBP, or PLN',
+    ),
 })
+
+const COUNTRY_MARKETS: Record<string, { country: string; currency: string }> = {
+  AT: { country: 'Austria', currency: 'EUR' },
+  AU: { country: 'Australia', currency: 'AUD' },
+  BE: { country: 'Belgium', currency: 'EUR' },
+  CA: { country: 'Canada', currency: 'CAD' },
+  CH: { country: 'Switzerland', currency: 'CHF' },
+  CZ: { country: 'Czechia', currency: 'CZK' },
+  DE: { country: 'Germany', currency: 'EUR' },
+  DK: { country: 'Denmark', currency: 'DKK' },
+  ES: { country: 'Spain', currency: 'EUR' },
+  FI: { country: 'Finland', currency: 'EUR' },
+  FR: { country: 'France', currency: 'EUR' },
+  GB: { country: 'United Kingdom', currency: 'GBP' },
+  HU: { country: 'Hungary', currency: 'HUF' },
+  IE: { country: 'Ireland', currency: 'EUR' },
+  IT: { country: 'Italy', currency: 'EUR' },
+  JP: { country: 'Japan', currency: 'JPY' },
+  NL: { country: 'Netherlands', currency: 'EUR' },
+  NO: { country: 'Norway', currency: 'NOK' },
+  NZ: { country: 'New Zealand', currency: 'NZD' },
+  PL: { country: 'Poland', currency: 'PLN' },
+  PT: { country: 'Portugal', currency: 'EUR' },
+  RO: { country: 'Romania', currency: 'RON' },
+  SE: { country: 'Sweden', currency: 'SEK' },
+  SK: { country: 'Slovakia', currency: 'EUR' },
+  US: { country: 'United States', currency: 'USD' },
+}
+
+const COUNTRY_ALIASES: Record<string, string> = {
+  austria: 'AT',
+  australia: 'AU',
+  belgium: 'BE',
+  canada: 'CA',
+  switzerland: 'CH',
+  czechia: 'CZ',
+  'czech republic': 'CZ',
+  germany: 'DE',
+  denmark: 'DK',
+  spain: 'ES',
+  finland: 'FI',
+  france: 'FR',
+  'united kingdom': 'GB',
+  uk: 'GB',
+  hungary: 'HU',
+  ireland: 'IE',
+  italy: 'IT',
+  japan: 'JP',
+  netherlands: 'NL',
+  norway: 'NO',
+  'new zealand': 'NZ',
+  poland: 'PL',
+  polska: 'PL',
+  portugal: 'PT',
+  romania: 'RO',
+  sweden: 'SE',
+  slovakia: 'SK',
+  'united states': 'US',
+  usa: 'US',
+}
+
+export function resolveCountryMarket(country: string | undefined) {
+  if (!country) return undefined
+  const normalized = country.trim()
+  const code =
+    normalized.length === 2
+      ? normalized.toUpperCase()
+      : COUNTRY_ALIASES[normalized.toLocaleLowerCase('en-US')]
+  return code ? COUNTRY_MARKETS[code] : undefined
+}
+
+export function productSystemPromptForCountry(countryCode: string | null): string {
+  const market = resolveCountryMarket(countryCode ?? undefined)
+  if (!market) {
+    return `${PRODUCT_SYSTEM_PROMPT}\n\n# Session market context\n- No reliable approximate country is available. Ask for the country when market matters.`
+  }
+  return `${PRODUCT_SYSTEM_PROMPT}\n\n# Session market context\n- Approximate shopper country: ${market.country}.\n- Default market and currency: ${market.country}, ${market.currency}. This is only a default; follow any user override.`
+}
 
 export const productDisplayInputSchema = z.object({
   action: z
@@ -107,9 +201,9 @@ export const productDisplayInputSchema = z.object({
 
 const productTools = {
   search_products: tool({
-    title: 'Search products',
+    title: 'Search mock products',
     description:
-      'Search the live web for current ecommerce products, list and discount prices, shipping or delivery costs, availability, returns, warranty, specifications, seller reputation evidence, and reviews. This tool must be used before making any current product claim or recommendation.',
+      'Search 500 synthetic ecommerce offers with structured prices, taxes, checkout totals, shipping, stock, delivery, returns, warranty, specifications, and seller evidence. This is mock data, not a live-web search.',
     inputSchema: productSearchInputSchema,
     strict: true,
   }),
@@ -131,251 +225,38 @@ export function getProductToolDefinitions() {
   return toolDefinitionsPromise
 }
 
-type ExaResult = {
-  title?: string | null
-  url?: string | null
-  publishedDate?: string | null
-  author?: string | null
-  image?: string | null
-  favicon?: string | null
-  highlights?: string[] | null
-}
-
-type ExaResponse = {
-  results?: ExaResult[]
-  error?: string
-  message?: string
-}
-
-function sourceName(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    return 'unknown source'
-  }
-}
-
-const PRICE_PATTERN =
-  /(?:[$€£]\s?\d[\d,.]*(?:\.\d{2})?|\d[\d,.]*(?:\.\d{2})?\s?(?:USD|EUR|GBP|PLN))/i
-const DISCOUNT_PATTERN =
-  /(?:\b\d{1,2}%\s*off\b|\bsave\s+[$€£]?\s?\d[\d,.]*\b|\bdiscount(?:ed)?\b|\bsale price\b)/i
-const SHIPPING_PATTERN = /\b(?:free\s+)?(?:shipping|delivery)|\bships?\s+(?:for|from|within|in)\b/i
-
-function safeAssetUrl(value: string | null | undefined): string | undefined {
-  if (!value) return undefined
-  try {
-    const url = new URL(value)
-    return url.protocol === 'https:' ? url.toString() : undefined
-  } catch {
-    return undefined
-  }
-}
-
-function parsePrice(display: string): { value: number; currency: string } | undefined {
-  const currency = display.includes('$')
-    ? 'USD'
-    : display.includes('€')
-      ? 'EUR'
-      : display.includes('£')
-        ? 'GBP'
-        : display.match(/\b(?:USD|EUR|GBP|PLN)\b/i)?.[0].toUpperCase()
-  const raw = display.match(/\d[\d,.]*/)?.[0]
-  if (!currency || !raw) return undefined
-
-  const lastComma = raw.lastIndexOf(',')
-  const lastDot = raw.lastIndexOf('.')
-  let normalized = raw
-  if (lastComma >= 0 && lastDot >= 0) {
-    const decimal = lastComma > lastDot ? ',' : '.'
-    const thousands = decimal === ',' ? /\./g : /,/g
-    normalized = raw.replace(thousands, '').replace(decimal, '.')
-  } else if (lastComma >= 0) {
-    normalized = /,\d{2}$/.test(raw)
-      ? raw.replace(/\./g, '').replace(',', '.')
-      : raw.replace(/,/g, '')
-  } else if (lastDot >= 0 && !/\.\d{2}$/.test(raw)) {
-    normalized = raw.replace(/\./g, '')
-  }
-
-  const value = Number(normalized)
-  return Number.isFinite(value) && value >= 0 ? { value, currency } : undefined
-}
-
-function findPrice(
-  highlights: string[],
-): { display: string; value: number; currency: string } | undefined {
-  for (const highlight of highlights) {
-    const display = highlight.match(PRICE_PATTERN)?.[0]?.replace(/\s+/g, ' ').trim()
-    if (!display) continue
-    const parsed = parsePrice(display)
-    if (parsed) return { display, ...parsed }
-  }
-  return undefined
-}
-
-function findEvidence(
-  highlights: string[],
-  pattern: RegExp,
-  maxLength: number,
-): string | undefined {
-  for (const highlight of highlights) {
-    const sentences = highlight.split(/(?<=[.!?])\s+/)
-    const sentence = sentences.find((value) => pattern.test(value))
-    if (sentence) return sentence.replace(/\s+/g, ' ').trim().slice(0, maxLength)
-  }
-  return undefined
-}
-
-function sellerReliability(
-  highlights: string[],
-  publishedDate: string | null | undefined,
-  price: string | undefined,
-  shipping: string | undefined,
-): ProductCardData['sellerReliability'] {
-  const evidence = highlights.join(' ')
-  const basis = ['Indexed HTTPS seller page']
-  let score = 25
-
-  if (/\b(?:official|authorized)\b/i.test(evidence)) {
-    score += 20
-    basis.push('Official or authorized seller evidence')
-  }
-  if (/\b(?:return|refund)\b/i.test(evidence)) {
-    score += 15
-    basis.push('Returns or refunds described')
-  }
-  if (/\bwarrant(?:y|ies)\b/i.test(evidence)) {
-    score += 15
-    basis.push('Warranty evidence found')
-  }
-  if (/\b(?:customer reviews?|ratings?|trustpilot)\b/i.test(evidence)) {
-    score += 10
-    basis.push('Customer reputation evidence found')
-  }
-  if (shipping) {
-    score += 10
-    basis.push('Shipping terms found')
-  }
-  if (price) {
-    score += 5
-    basis.push('Price evidence found')
-  }
-  if (publishedDate) {
-    const age = Date.now() - new Date(publishedDate).getTime()
-    if (Number.isFinite(age) && age >= 0 && age < 1000 * 60 * 60 * 24 * 548) {
-      score += 5
-      basis.push('Recent dated source')
-    }
-  }
-  if (/\b(?:scam|counterfeit|fraud|unresolved complaints?)\b/i.test(evidence)) {
-    score -= 30
-    basis.push('Negative seller signals found')
-  }
-
-  const bounded = Math.max(10, Math.min(95, score))
-  return {
-    score: bounded,
-    label: bounded >= 75 ? 'strong' : bounded >= 50 ? 'moderate' : 'limited',
-    basis: basis.slice(0, 4),
-  }
-}
-
-export async function searchProducts(
-  input: z.infer<typeof productSearchInputSchema>,
-  exaApiKey: string,
-): Promise<{
+export function searchProducts(input: z.infer<typeof productSearchInputSchema>): Promise<{
   query: string
   searchedAt: string
+  catalogSize: number
   products: ProductCardData[]
 }> {
   const parsed = productSearchInputSchema.parse(input)
-  const market = parsed.country ? ` in ${parsed.country}` : ''
-  const budget = [
-    parsed.minPrice !== undefined ? `minimum ${parsed.minPrice}` : '',
-    parsed.maxPrice !== undefined ? `maximum ${parsed.maxPrice}` : '',
-    parsed.currency || '',
-  ]
-    .filter(Boolean)
-    .join(' ')
-  const searchQuery = `${parsed.query}${market}${budget ? ` hard price range ${budget}` : ''} current price original price discount sale shipping delivery cost availability returns warranty seller reviews reliability buy retailer product`
-  const response = await fetch('https://api.exa.ai/search', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': exaApiKey },
-    body: JSON.stringify({
-      query: searchQuery,
-      type: 'auto',
-      numResults:
-        parsed.minPrice !== undefined || parsed.maxPrice !== undefined
-          ? 8
-          : (parsed.maxResults ?? 5),
-      contents: { highlights: { maxCharacters: 1_200 } },
-    }),
-    signal: AbortSignal.timeout(15_000),
+  const countryMarket = resolveCountryMarket(parsed.country)
+  const effectiveCurrency = parsed.currency ?? countryMarket?.currency
+  const products = searchMockProducts({
+    query: parsed.query,
+    country: parsed.country,
+    currency: effectiveCurrency,
+    minPrice: parsed.minPrice,
+    maxPrice: parsed.maxPrice,
+    maxResults: parsed.maxResults ?? 5,
   })
 
-  const body = (await response.json()) as ExaResponse
-  if (!response.ok)
-    throw new Error(body.error || body.message || `Product search failed (${response.status})`)
-
-  const products = (body.results ?? []).flatMap((result) => {
-    const title = result.title?.trim()
-    const url = result.url?.trim()
-    if (!title || !url || !/^https?:\/\//i.test(url)) return []
-    const highlights = (result.highlights ?? [])
-      .map((value) => value.trim().slice(0, 900))
-      .filter(Boolean)
-      .slice(0, 4)
-    const price = findPrice(highlights)
-    const discount = findEvidence(highlights, DISCOUNT_PATTERN, 110)
-    const shipping = findEvidence(highlights, SHIPPING_PATTERN, 150)
-    const reliability = sellerReliability(
-      highlights,
-      result.publishedDate,
-      price?.display,
-      shipping,
-    )
-    const image = safeAssetUrl(result.image)
-    const favicon = safeAssetUrl(result.favicon)
-    return [
-      {
-        title: title.slice(0, 240),
-        url,
-        source: sourceName(url),
-        ...(price
-          ? { price: price.display, priceValue: price.value, priceCurrency: price.currency }
-          : {}),
-        ...(discount ? { discount } : {}),
-        ...(shipping ? { shipping } : {}),
-        sellerReliability: reliability,
-        ...(image ? { image } : {}),
-        ...(favicon ? { favicon } : {}),
-        ...(result.publishedDate ? { publishedDate: result.publishedDate } : {}),
-        highlights,
-      },
-    ]
-  })
-
-  const matchingProducts = products.filter((product) => {
-    const hasBudget = parsed.minPrice !== undefined || parsed.maxPrice !== undefined
-    if (!hasBudget) return true
-    if (product.priceValue === undefined || !product.priceCurrency) return false
-    if (parsed.currency && product.priceCurrency !== parsed.currency) return false
-    if (parsed.minPrice !== undefined && product.priceValue < parsed.minPrice) return false
-    if (parsed.maxPrice !== undefined && product.priceValue > parsed.maxPrice) return false
-    return true
-  })
-
-  return {
+  return Promise.resolve({
     query: parsed.query,
     searchedAt: new Date().toISOString(),
+    catalogSize: MOCK_PRODUCT_CATALOG.length,
     budget:
       parsed.minPrice !== undefined || parsed.maxPrice !== undefined
-        ? { minPrice: parsed.minPrice, maxPrice: parsed.maxPrice, currency: parsed.currency }
+        ? { minPrice: parsed.minPrice, maxPrice: parsed.maxPrice, currency: effectiveCurrency }
         : undefined,
-    products: matchingProducts,
-    ...(matchingProducts.length === 0 &&
-    (parsed.minPrice !== undefined || parsed.maxPrice !== undefined)
-      ? { message: 'No product with a verified current price matched the requested range.' }
+    products,
+    ...(products.length === 0
+      ? {
+          message:
+            'No mock product matched the requested query, market, currency, and price constraints.',
+        }
       : {}),
-  }
+  })
 }

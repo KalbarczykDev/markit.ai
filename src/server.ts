@@ -1,8 +1,8 @@
 import handler from '@tanstack/react-start/server-entry'
 
 import {
-  PRODUCT_SYSTEM_PROMPT,
   getProductToolDefinitions,
+  productSystemPromptForCountry,
   productDisplayInputSchema,
   productSearchInputSchema,
   searchProducts,
@@ -17,7 +17,6 @@ type ExecutionContext = {
 
 type Env = {
   OPENAI_API_KEY?: string
-  EXA_API_KEY?: string
 }
 
 type WorkerWebSocket = WebSocket & { accept(): void }
@@ -57,10 +56,9 @@ async function executeAgentTool(
   let output: unknown
   try {
     if (call.name === 'search_products') {
-      if (!env.EXA_API_KEY) throw new Error('Product search is not configured')
       const input = productSearchInputSchema.parse(JSON.parse(call.arguments || '{}'))
       sendJson(client, { type: 'markit.status', status: 'searching', query: input.query })
-      const result = await searchProducts(input, env.EXA_API_KEY)
+      const result = await searchProducts(input)
       state.latestProducts = result.products
       state.analysisGeneration += 1
       const generation = state.analysisGeneration
@@ -145,6 +143,7 @@ async function realtimeSocket(
   }
 
   const toolDefinitions = await getProductToolDefinitions()
+  const productSystemPrompt = productSystemPromptForCountry(request.headers.get('cf-ipcountry'))
 
   const openAIResponse = (await fetch('https://api.openai.com/v1/realtime?model=gpt-realtime-2.1', {
     headers: {
@@ -178,7 +177,7 @@ async function realtimeSocket(
             ...message,
             session: {
               ...message.session,
-              instructions: PRODUCT_SYSTEM_PROMPT,
+              instructions: productSystemPrompt,
               tools: toolDefinitions,
               tool_choice: 'auto',
               parallel_tool_calls: false,
