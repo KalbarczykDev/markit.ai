@@ -15,6 +15,8 @@ Guidance for AI agents working in this repository. This file is the single sourc
 - TypeScript in strict mode
 - Oxfmt and type-aware Oxlint
 - Cloudflare Workers via `@cloudflare/vite-plugin` and Wrangler
+- AI SDK v7 for typed realtime tool definitions
+- Exa for live ecommerce product retrieval
 
 The app is a single package. Routes live in `src/routes`, the router is in `src/router.tsx`, and the Cloudflare Worker entry is `src/server.ts`.
 
@@ -47,8 +49,11 @@ Use `bun oxlint --type-aware` as the source of truth for linting and type analys
 - HeroUI interactions use `onPress`, not `onClick`.
 - Keep `resolve.dedupe: ['react', 'react-dom']` in Vite. A single React copy is required by React Aria overlays.
 - Use Tailwind v4 and the design tokens in `src/index.css`.
-- The interface is intentionally a single voice orb. Do not add visible navigation, copy, cards, or conventional controls unless explicitly requested.
+- The interface is intentionally a single voice orb plus a compact live agent-status indicator. Do not add navigation, cards, transcripts, or conventional controls unless explicitly requested.
 - Voice transport uses the same-origin `/api/realtime` WebSocket proxy to OpenAI's `gpt-realtime-2.1` model. Keep the API key server-side as the `OPENAI_API_KEY` Worker secret.
+- `src/product-agent.ts` owns the server-enforced ecommerce system prompt, AI SDK v7 `search_products` tool definition, input validation, and Exa result sanitization. Current product claims must be grounded in tool results.
+- The Worker injects the trusted prompt and tools into every `session.update`; never trust browser-supplied instructions or tool definitions.
+- Exa uses the `EXA_API_KEY` Worker secret. Never expose it to the browser or return raw upstream errors.
 - Microphone audio is mono PCM16 at 24 kHz. Use semantic VAD with automatic response creation and interruption enabled.
 - WebSocket playback is client-managed. On `input_audio_buffer.speech_started`, stop every queued audio source immediately and send `conversation.item.truncate` with the played duration. Ignore late deltas from interrupted responses, and never allow two response queues to play concurrently.
 - Keep secrets out of source, docs, Git, and command output. Local secrets belong in ignored `.env` or `.dev.vars` files; production secrets belong in Cloudflare Worker secrets.

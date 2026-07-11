@@ -38,12 +38,21 @@ button {
     radial-gradient(circle at 50% 46%, rgba(255, 255, 255, 0.95), transparent 34rem), #f3f2ef;
 }
 
+.voice-agent {
+  display: grid;
+  place-items: center;
+  gap: 2rem;
+}
+
 .voice-orb {
   --level: 0;
   position: relative;
-  width: clamp(148px, 21vw, 224px);
+  width: clamp(148px, 21vw, 224px) !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
   aspect-ratio: 1;
-  padding: 0;
+  padding: 0 !important;
   border: 0;
   border-radius: 50%;
   outline: none;
@@ -170,6 +179,52 @@ button {
 
 .voice-orb[data-state='error'] {
   filter: grayscale(0.7) opacity(0.72);
+}
+
+.agent-status {
+  display: flex;
+  min-height: 1.5rem;
+  align-items: center;
+  gap: 0.6rem;
+  color: rgba(30, 30, 36, 0.62);
+  font-size: 0.72rem;
+  font-weight: 520;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  transition:
+    color 200ms ease,
+    opacity 200ms ease;
+}
+
+.agent-status .spinner {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
+.agent-status-dot {
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.48;
+}
+
+.agent-status[data-state='listening'] {
+  color: rgba(73, 84, 194, 0.76);
+}
+
+.agent-status[data-state='searching'],
+.agent-status[data-state='thinking'] {
+  color: rgba(101, 72, 190, 0.82);
+}
+
+.agent-status[data-state='speaking'] {
+  color: rgba(175, 68, 132, 0.78);
+}
+
+.agent-status[data-state='search-error'],
+.agent-status[data-state='error'] {
+  color: rgba(137, 62, 62, 0.72);
 }
 
 @keyframes drift {

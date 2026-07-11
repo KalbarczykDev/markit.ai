@@ -1,6 +1,15 @@
+import { Button, Spinner } from '@heroui/react'
 import { useEffect, useRef, useState } from 'react'
 
-type OrbState = 'idle' | 'connecting' | 'listening' | 'speaking' | 'error'
+type OrbState =
+  | 'idle'
+  | 'connecting'
+  | 'listening'
+  | 'thinking'
+  | 'searching'
+  | 'speaking'
+  | 'search-error'
+  | 'error'
 
 type AudioRuntime = {
   context: AudioContext
@@ -19,6 +28,7 @@ type ActiveOutput = {
 
 type RealtimeMessage = {
   type?: string
+  status?: string
   delta?: string
   item_id?: string
   response_id?: string
@@ -27,6 +37,17 @@ type RealtimeMessage = {
 }
 
 const INPUT_RATE = 24_000
+
+const STATUS_LABELS: Record<OrbState, string> = {
+  idle: 'Tap to talk',
+  connecting: 'Connecting',
+  listening: 'Listening',
+  thinking: 'Checking product data',
+  searching: 'Searching products',
+  speaking: 'Speaking',
+  'search-error': 'Search unavailable',
+  error: 'Connection unavailable',
+}
 
 function floatToPcm16(input: Float32Array): Int16Array {
   const output = new Int16Array(input.length)
@@ -253,8 +274,6 @@ export function VoiceOrb() {
               type: 'realtime',
               model: 'gpt-realtime-2.1',
               reasoning: { effort: 'low' },
-              instructions:
-                'You are Markit, a concise and warm voice assistant. Reply naturally and keep answers brief unless the user asks for detail.',
               output_modalities: ['audio'],
               audio: {
                 input: {
@@ -283,6 +302,7 @@ export function VoiceOrb() {
             haltPlayback()
           }
           activeResponseRef.current = responseId ?? null
+          setState('thinking')
         } else if (message.type === 'response.output_audio.delta') {
           if (
             message.delta &&
@@ -302,6 +322,12 @@ export function VoiceOrb() {
           if (responseId) interruptedResponsesRef.current.add(responseId)
           haltPlayback(socket, true)
           setState('listening')
+        } else if (message.type === 'input_audio_buffer.speech_stopped') {
+          setState('thinking')
+        } else if (message.type === 'markit.status') {
+          if (message.status === 'searching') setState('searching')
+          else if (message.status === 'thinking') setState('thinking')
+          else if (message.status === 'search-error') setState('search-error')
         } else if (message.type === 'response.done') {
           const responseId = message.response?.id
           if (responseId) interruptedResponsesRef.current.delete(responseId)
@@ -348,22 +374,31 @@ export function VoiceOrb() {
       : state === 'error'
         ? 'Voice unavailable. Try again'
         : 'End voice conversation'
+  const isPending = state === 'connecting' || state === 'thinking' || state === 'searching'
 
   return (
-    <button
-      ref={orbRef}
-      type="button"
-      className="voice-orb"
-      data-state={state}
-      aria-label={label}
-      title={label}
-      onClick={() => void start()}
-    >
-      <span className="orb-halo" />
-      <span className="orb-shell">
-        <span className="orb-core" />
-        <span className="orb-wave" />
-      </span>
-    </button>
+    <div className="voice-agent">
+      <Button
+        ref={orbRef}
+        type="button"
+        isIconOnly
+        variant="ghost"
+        className="voice-orb"
+        data-state={state}
+        aria-label={label}
+        title={label}
+        onPress={() => void start()}
+      >
+        <span className="orb-halo" />
+        <span className="orb-shell">
+          <span className="orb-core" />
+          <span className="orb-wave" />
+        </span>
+      </Button>
+      <div className="agent-status" data-state={state} role="status" aria-live="polite">
+        {isPending ? <Spinner size="sm" color="current" /> : <span className="agent-status-dot" />}
+        <span>{STATUS_LABELS[state]}</span>
+      </div>
+    </div>
   )
 }

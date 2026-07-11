@@ -1,0 +1,146 @@
+import { experimental_getRealtimeToolDefinitions, tool } from 'ai'
+import { z } from 'zod'
+
+export const PRODUCT_SYSTEM_PROMPT = `# Role and objective
+You are Markit, a voice-first ecommerce product research agent. Help shoppers discover and compare products using current, verifiable commerce data.
+
+# Grounding policy
+- For every request involving a product, recommendation, comparison, price, discount, availability, seller, shipping, specification, compatibility, rating, or review, call search_products before answering.
+- Treat search_products results as the only source of truth for current ecommerce facts. Never answer current product questions from memory.
+- Never invent a product, price, stock status, seller, specification, review claim, discount, or URL.
+- If the results do not verify a claim, say that it could not be verified. Ask one focused follow-up question or suggest a narrower search.
+- Clearly distinguish facts found in results from your own concise comparison or recommendation.
+- Mention the retailer or source for important facts. Offer to provide the source link when useful.
+
+# Scope
+- Stay focused on shopping, products, retailers, and ecommerce decisions.
+- If a request is unrelated, briefly explain that you specialize in product research and ask what product the user wants help finding.
+
+# Tool behavior
+- Build a specific search query from the user's requirements, including product type, key constraints, location or currency when known, and intent such as current price or availability.
+- Search again when the first result set is insufficient, conflicting, stale, or does not answer the user's constraints.
+- Do not announce raw tool syntax. A short natural preamble such as "I'll check current listings" is appropriate before searching.
+
+# Voice style
+- Be warm, direct, and concise.
+- Give the answer first, then at most three useful options or differences.
+- Ask only one clarification at a time.
+- Do not read long URLs aloud.`
+
+export const productSearchInputSchema = z.object({
+  query: z
+    .string()
+    .trim()
+    .min(2)
+    .max(300)
+    .describe('A specific product shopping query containing the user requirements'),
+  country: z
+    .string()
+    .trim()
+    .min(2)
+    .max(80)
+    .optional()
+    .describe('Country or market to prioritize when the user provides one'),
+  maxResults: z
+    .number()
+    .int()
+    .min(3)
+    .max(8)
+    .optional()
+    .describe('Number of product search results to return'),
+})
+
+const productTools = {
+  search_products: tool({
+    title: 'Search products',
+    description:
+      'Search the live web for current ecommerce products, retailer listings, prices, availability, specifications, and reviews. This tool must be used before making any current product claim or recommendation.',
+    inputSchema: productSearchInputSchema,
+    strict: true,
+  }),
+}
+
+let toolDefinitionsPromise:
+  | ReturnType<typeof experimental_getRealtimeToolDefinitions<typeof productTools>>
+  | undefined
+
+export function getProductToolDefinitions() {
+  toolDefinitionsPromise ??= experimental_getRealtimeToolDefinitions({ tools: productTools })
+  return toolDefinitionsPromise
+}
+
+type ExaResult = {
+  title?: string | null
+  url?: string | null
+  publishedDate?: string | null
+  author?: string | null
+  highlights?: string[] | null
+}
+
+type ExaResponse = {
+  results?: ExaResult[]
+  error?: string
+  message?: string
+}
+
+function sourceName(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return 'unknown source'
+  }
+}
+
+export async function searchProducts(
+  input: z.infer<typeof productSearchInputSchema>,
+  exaApiKey: string,
+): Promise<{
+  query: string
+  searchedAt: string
+  products: Array<{
+    title: string
+    url: string
+    source: string
+    publishedDate?: string
+    highlights: string[]
+  }>
+}> {
+  const parsed = productSearchInputSchema.parse(input)
+  const market = parsed.country ? ` in ${parsed.country}` : ''
+  const searchQuery = `${parsed.query}${market} current price availability buy retailer product`
+  const response = await fetch('https://api.exa.ai/search', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': exaApiKey },
+    body: JSON.stringify({
+      query: searchQuery,
+      type: 'auto',
+      numResults: parsed.maxResults ?? 5,
+      contents: { highlights: { maxCharacters: 900 } },
+    }),
+    signal: AbortSignal.timeout(15_000),
+  })
+
+  const body = (await response.json()) as ExaResponse
+  if (!response.ok)
+    throw new Error(body.error || body.message || `Product search failed (${response.status})`)
+
+  const products = (body.results ?? []).flatMap((result) => {
+    const title = result.title?.trim()
+    const url = result.url?.trim()
+    if (!title || !url || !/^https?:\/\//i.test(url)) return []
+    return [
+      {
+        title: title.slice(0, 240),
+        url,
+        source: sourceName(url),
+        ...(result.publishedDate ? { publishedDate: result.publishedDate } : {}),
+        highlights: (result.highlights ?? [])
+          .map((value) => value.trim().slice(0, 900))
+          .filter(Boolean)
+          .slice(0, 3),
+      },
+    ]
+  })
+
+  return { query: parsed.query, searchedAt: new Date().toISOString(), products }
+}

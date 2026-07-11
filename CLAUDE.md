@@ -9,8 +9,9 @@
 - HeroUI is v3 only. Import from `@heroui/react`, use compound v3 APIs where applicable, and use `onPress` for interactions.
 - The production target is the Cloudflare Worker `markit-ai` in account `90c76061632cca916b79973127d31e87`.
 - The Vite Cloudflare build emits the deployment config at `dist/server/wrangler.json`.
-- The product UI is one reactive voice orb. Audio streams through `/api/realtime` over WebSockets to OpenAI `gpt-realtime-2.1`.
-- `OPENAI_API_KEY` must be configured as a Cloudflare Worker secret and must never be exposed to the browser.
+- The product UI is one reactive voice orb with a compact HeroUI v3 status indicator. Audio streams through `/api/realtime` over WebSockets to OpenAI `gpt-realtime-2.1`.
+- Product research is grounded through the AI SDK v7 `search_products` tool in `src/product-agent.ts`. The Worker executes searches against Exa and reports tool status to the browser with `markit.status` events.
+- `OPENAI_API_KEY` and `EXA_API_KEY` must be configured as Cloudflare Worker secrets and must never be exposed to the browser.
 - API tokens and global keys are runtime credentials. Never echo them, store them in these docs, add them to source, or commit them.
 
 ## Completion workflow
