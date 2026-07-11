@@ -47,6 +47,7 @@ type AuthUser = {
 type AuthError = { message?: string; error?: string }
 type UserResponse = { user?: AuthUser | null }
 type SessionResponse = { user?: AuthUser | null; session?: unknown }
+type SignOutResponse = { success?: boolean }
 
 const AccountContext = createContext<AccountContextValue | null>(null)
 
@@ -142,7 +143,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
-    await authRequest('/api/auth/sign-out', { method: 'POST' })
+    const result = await authRequest<SignOutResponse>('/api/auth/sign-out', { method: 'POST' })
+    if (!result.success) throw new Error('The account could not be signed out.')
     setProfile(null)
   }, [])
 
@@ -220,15 +222,27 @@ export function AccountBar() {
   const navigate = useNavigate()
   const { profile, isLoading, logout } = useAccount()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
+
+  const signOut = async () => {
+    if (isLoggingOut) return
+    setLogoutError('')
+    setIsLoggingOut(true)
+    try {
+      await logout()
+      window.location.replace('/login')
+    } catch {
+      setLogoutError('Sign out failed. Try again.')
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   const handleAction = (key: Key) => {
     if (key === 'profile') void navigate({ to: '/profile' })
     if (key === 'listings') void navigate({ to: '/listings' })
     if (key === 'home') void navigate({ to: '/' })
-    if (key === 'logout') {
-      setIsLoggingOut(true)
-      void logout().finally(() => setIsLoggingOut(false))
-    }
+    if (key === 'logout') void signOut()
   }
 
   return (
@@ -249,7 +263,7 @@ export function AccountBar() {
                   <Avatar.Fallback>{initials(profile.name) || 'M'}</Avatar.Fallback>
                 </Avatar>
                 <span className="account-trigger-copy">
-                  <small>Account</small>
+                  <small role={logoutError ? 'alert' : undefined}>{logoutError || 'Account'}</small>
                   <strong>{profile.name}</strong>
                 </span>
                 <span aria-hidden="true" className="account-chevron">
