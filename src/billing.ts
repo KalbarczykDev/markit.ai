@@ -46,47 +46,28 @@ function stripeId(value: string | { id: string } | null): string | null {
   return typeof value === 'string' ? value : (value?.id ?? null)
 }
 
-async function syncCheckoutSession(env: BillingEnv, session: Stripe.Checkout.Session) {
-  const userId = session.client_reference_id || session.metadata?.userId
-  if (!env.DB || !userId || session.payment_status === 'unpaid') return
-
-  await env.DB.prepare(
-    `UPDATE user
-       SET billing_status = ?, stripe_customer_id = ?, stripe_subscription_id = ?,
-           stripe_product_id = ?, updated_at = ?
-     WHERE id = ?`,
-  )
-    .bind(
-      'active',
-      stripeId(session.customer),
-      stripeId(session.subscription),
-      session.metadata?.productId ?? null,
-      Date.now(),
-      userId,
-    )
-    .run()
+async function stripeCustomer(stripe: Stripe, email: string) {
+  const customers = await stripe.customers.list({ email, limit: 1 })
+  return customers.data[0] ?? null
 }
 
-async function syncSubscription(env: BillingEnv, subscription: Stripe.Subscription) {
-  if (!env.DB) return
-  const status = ['active', 'trialing'].includes(subscription.status)
-    ? 'active'
-    : subscription.status
-  const product = subscription.items.data[0]?.price.product
-  await env.DB.prepare(
-    `UPDATE user
-       SET billing_status = ?, stripe_subscription_id = ?, stripe_product_id = ?, updated_at = ?
-     WHERE stripe_customer_id = ? OR id = ?`,
+async function hasActivePurchase(stripe: Stripe, customerId: string, productId: string) {
+  const [subscriptions, sessions] = await Promise.all([
+    stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 }),
+    stripe.checkout.sessions.list({ customer: customerId, limit: 100 }),
+  ])
+  const activeSubscription = subscriptions.data.some(
+    (subscription) =>
+      ['active', 'trialing'].includes(subscription.status) &&
+      subscription.items.data.some((item) => stripeId(item.price.product) === productId),
   )
-    .bind(
-      status,
-      subscription.id,
-      typeof product === 'string' ? product : (product?.id ?? null),
-      Date.now(),
-      stripeId(subscription.customer),
-      subscription.metadata.userId || '',
-    )
-    .run()
+  const completedPayment = sessions.data.some(
+    (session) =>
+      session.metadata?.productId === productId &&
+      session.status === 'complete' &&
+      session.payment_status !== 'unpaid',
+  )
+  return activeSubscription || completedPayment
 }
 
 async function createCheckout(request: Request, env: BillingEnv) {
@@ -100,12 +81,8 @@ async function createCheckout(request: Request, env: BillingEnv) {
 
   const stripe = stripeClient(env.STRIPE_SECRET_KEY)
   const productId = env.STRIPE_PRODUCT_ID || DEFAULT_STRIPE_PRODUCT_ID
-  const customer = env.DB
-    ? await env.DB.prepare('SELECT stripe_customer_id, billing_status FROM user WHERE id = ?')
-        .bind(user.id)
-        .first<{ stripe_customer_id: string | null; billing_status: string }>()
-    : null
-  if (customer?.billing_status === 'active') {
+  const customer = await stripeCustomer(stripe, user.email)
+  if (customer && (await hasActivePurchase(stripe, customer.id, productId))) {
     return jsonError('This account already has an active purchase.', 409)
   }
   const { price } = await configuredPrice(stripe, productId)
@@ -117,15 +94,14 @@ async function createCheckout(request: Request, env: BillingEnv) {
     success_url: `${origin}/profile?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/profile?checkout=cancelled`,
     client_reference_id: user.id,
-    ...(customer?.stripe_customer_id
-      ? { customer: customer.stripe_customer_id }
-      : { customer_email: user.email }),
+    ...(customer ? { customer: customer.id } : { customer_email: user.email }),
     allow_promotion_codes: true,
     automatic_tax: { enabled: true },
     billing_address_collection: 'auto',
     tax_id_collection: { enabled: true },
     metadata: { userId: user.id, productId },
     ...(price.recurring ? { subscription_data: { metadata: { userId: user.id, productId } } } : {}),
+    ...(!price.recurring && !customer ? { customer_creation: 'always' as const } : {}),
   })
 
   if (!checkout.url) throw new Error('Stripe did not return a checkout URL.')
@@ -135,13 +111,16 @@ async function createCheckout(request: Request, env: BillingEnv) {
 async function productDetails(request: Request, env: BillingEnv) {
   if (request.method !== 'GET') return jsonError('Method not allowed.', 405)
   if (!env.STRIPE_SECRET_KEY) return jsonError('Payments are not configured.', 503)
-  if (!(await authenticatedUser(request, env))) return jsonError('Authentication required.', 401)
+  const user = await authenticatedUser(request, env)
+  if (!user) return jsonError('Authentication required.', 401)
 
   const stripe = stripeClient(env.STRIPE_SECRET_KEY)
   const { product, price } = await configuredPrice(
     stripe,
     env.STRIPE_PRODUCT_ID || DEFAULT_STRIPE_PRODUCT_ID,
   )
+  const customer = await stripeCustomer(stripe, user.email)
+  const active = customer ? await hasActivePurchase(stripe, customer.id, product.id) : false
   return Response.json({
     product: {
       id: product.id,
@@ -152,6 +131,7 @@ async function productDetails(request: Request, env: BillingEnv) {
       recurring: price.recurring
         ? { interval: price.recurring.interval, intervalCount: price.recurring.interval_count }
         : null,
+      active,
     },
   })
 }
@@ -166,8 +146,6 @@ async function checkoutStatus(request: Request, env: BillingEnv) {
   if (!id?.startsWith('cs_')) return jsonError('A valid checkout session is required.', 400)
   const session = await stripeClient(env.STRIPE_SECRET_KEY).checkout.sessions.retrieve(id)
   if (session.client_reference_id !== user.id) return jsonError('Checkout session not found.', 404)
-  await syncCheckoutSession(env, session)
-
   return Response.json({
     status: session.status,
     paymentStatus: session.payment_status,
@@ -180,16 +158,15 @@ async function customerPortal(request: Request, env: BillingEnv) {
   if (request.headers.get('origin') !== new URL(request.url).origin) {
     return jsonError('Origin not allowed.', 403)
   }
-  if (!env.STRIPE_SECRET_KEY || !env.DB) return jsonError('Payments are not configured.', 503)
+  if (!env.STRIPE_SECRET_KEY) return jsonError('Payments are not configured.', 503)
   const user = await authenticatedUser(request, env)
   if (!user) return jsonError('Authentication required.', 401)
-  const record = await env.DB.prepare('SELECT stripe_customer_id FROM user WHERE id = ?')
-    .bind(user.id)
-    .first<{ stripe_customer_id: string | null }>()
-  if (!record?.stripe_customer_id) return jsonError('No Stripe customer is linked.', 404)
+  const stripe = stripeClient(env.STRIPE_SECRET_KEY)
+  const customer = await stripeCustomer(stripe, user.email)
+  if (!customer) return jsonError('No Stripe customer is linked.', 404)
 
-  const portal = await stripeClient(env.STRIPE_SECRET_KEY).billingPortal.sessions.create({
-    customer: record.stripe_customer_id,
+  const portal = await stripe.billingPortal.sessions.create({
+    customer: customer.id,
     return_url: `${new URL(request.url).origin}/profile`,
   })
   return Response.json({ url: portal.url })
@@ -217,19 +194,7 @@ async function stripeWebhook(request: Request, env: BillingEnv) {
     return jsonError('Invalid Stripe signature.', 400)
   }
 
-  if (
-    event.type === 'checkout.session.completed' ||
-    event.type === 'checkout.session.async_payment_succeeded'
-  ) {
-    await syncCheckoutSession(env, event.data.object)
-  } else if (
-    event.type === 'customer.subscription.updated' ||
-    event.type === 'customer.subscription.deleted'
-  ) {
-    await syncSubscription(env, event.data.object)
-  }
-
-  return Response.json({ received: true })
+  return Response.json({ received: true, type: event.type })
 }
 
 export async function handleBillingRequest(request: Request, env: BillingEnv) {

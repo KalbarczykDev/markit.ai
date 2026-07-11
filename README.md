@@ -31,13 +31,9 @@ wrangler secret put STRIPE_WEBHOOK_SECRET
 
 `STRIPE_PRODUCT_ID` is optional and defaults to the test product configured in the app. Stripe's
 publishable key is not required because card details are collected entirely on Stripe's hosted
-page. Apply the D1 migration before using billing locally:
-
-```bash
-bun x wrangler d1 migrations apply DB --local
-```
+page. Stripe remains the source of truth for purchase and subscription status, so billing does not
+require a database migration.
 
 Configure the Stripe webhook destination as `https://<your-host>/api/billing/webhook` and subscribe
 to `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
-`customer.subscription.updated`, and `customer.subscription.deleted`. Production migrations run
-automatically before deployment.
+`customer.subscription.updated`, and `customer.subscription.deleted`.

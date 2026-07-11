@@ -20,8 +20,6 @@ export type AccountProfile = {
   walletCents: number
   theme: ThemePreference
   offersEnabled: boolean
-  billingStatus: string
-  stripeProductId?: string
 }
 
 type Credentials = { email: string; password: string }
@@ -32,7 +30,6 @@ type AccountContextValue = {
   theme: ThemePreference
   login: (credentials: Credentials) => Promise<void>
   logout: () => Promise<void>
-  refreshProfile: () => Promise<void>
   setTheme: (theme: ThemePreference) => void
   updateProfile: (
     profile: Partial<Pick<AccountProfile, 'name' | 'email' | 'offersEnabled'>>,
@@ -46,8 +43,6 @@ type AuthUser = {
   walletCents?: number
   theme?: string
   offersEnabled?: boolean
-  billingStatus?: string
-  stripeProductId?: string | null
 }
 
 type AuthError = { message?: string; error?: string }
@@ -77,8 +72,6 @@ function accountProfile(user: AuthUser): AccountProfile {
     walletCents: user.walletCents ?? 0,
     theme,
     offersEnabled: user.offersEnabled ?? true,
-    billingStatus: user.billingStatus ?? 'inactive',
-    ...(user.stripeProductId ? { stripeProductId: user.stripeProductId } : {}),
   }
 }
 
@@ -155,10 +148,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setProfile(null)
   }, [])
 
-  const refreshProfile = useCallback(async () => {
-    setProfile(await currentProfile())
-  }, [])
-
   const updateProfile = useCallback(
     async (updates: Partial<Pick<AccountProfile, 'name' | 'email' | 'offersEnabled'>>) => {
       if (updates.email && updates.email !== profile?.email) {
@@ -205,11 +194,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       theme,
       login,
       logout,
-      refreshProfile,
       setTheme,
       updateProfile,
     }),
-    [profile, isLoading, theme, login, logout, refreshProfile, setTheme, updateProfile],
+    [profile, isLoading, theme, login, logout, setTheme, updateProfile],
   )
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>

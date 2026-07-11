@@ -10,10 +10,6 @@ export const user = sqliteTable('user', {
   walletCents: integer('wallet_cents').default(0).notNull(),
   theme: text('theme').default('system').notNull(),
   offersEnabled: integer('offers_enabled', { mode: 'boolean' }).default(true).notNull(),
-  billingStatus: text('billing_status').default('inactive').notNull(),
-  stripeCustomerId: text('stripe_customer_id'),
-  stripeSubscriptionId: text('stripe_subscription_id'),
-  stripeProductId: text('stripe_product_id'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 })

@@ -49,16 +49,6 @@ export function createAuth(request: Request, env: AuthEnv) {
           type: 'boolean',
           defaultValue: true,
         },
-        billingStatus: {
-          type: 'string',
-          defaultValue: 'inactive',
-          input: false,
-        },
-        stripeProductId: {
-          type: 'string',
-          required: false,
-          input: false,
-        },
       },
     },
     advanced: {

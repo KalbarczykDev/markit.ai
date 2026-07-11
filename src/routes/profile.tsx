@@ -30,6 +30,7 @@ type BillingProduct = {
   price: number | null
   currency: string
   recurring: { interval: string; intervalCount: number } | null
+  active: boolean
 }
 
 async function billingRequest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -40,7 +41,6 @@ async function billingRequest<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 function BillingCard() {
-  const { profile, refreshProfile } = useAccount()
   const [product, setProduct] = useState<BillingProduct | null>(null)
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [notice, setNotice] = useState('')
@@ -77,8 +77,8 @@ function BillingCard() {
     void billingRequest<{ paymentStatus: string }>(
       `/api/billing/session?session_id=${encodeURIComponent(sessionId)}`,
     )
-      .then(async ({ paymentStatus }) => {
-        await refreshProfile()
+      .then(({ paymentStatus }) => {
+        setProduct((current) => (current ? { ...current, active: true } : current))
         setNotice(
           paymentStatus === 'paid' || paymentStatus === 'no_payment_required'
             ? 'Payment confirmed. Your purchase is active.'
@@ -89,7 +89,7 @@ function BillingCard() {
       .catch((error: unknown) => {
         setBillingError(error instanceof Error ? error.message : 'Unable to confirm payment.')
       })
-  }, [refreshProfile])
+  }, [])
 
   const redirectTo = async (path: '/api/billing/checkout' | '/api/billing/portal') => {
     setIsRedirecting(true)
@@ -103,7 +103,7 @@ function BillingCard() {
     }
   }
 
-  const active = profile?.billingStatus === 'active'
+  const active = product?.active ?? false
   const canManage = active && Boolean(product?.recurring)
   const price =
     product?.price === null || product?.price === undefined
