@@ -148,7 +148,7 @@ async function executeAgentTool(
           output = {
             saved: true,
             favoriteCount: favorites.length,
-            location: 'Account → Profile & settings → Favorite listings',
+            location: 'Account → Favorites',
           }
         }
       }
