@@ -1,15 +1,35 @@
-import { Bookmark, ChevronsLeft, ChevronsRight, Microphone, Person } from '@gravity-ui/icons'
+import {
+  Bookmark,
+  ChevronsLeft,
+  ChevronsRight,
+  Comment,
+  Microphone,
+  Person,
+  Plus,
+} from '@gravity-ui/icons'
 import { Button } from '@heroui/react'
 import { useNavigate } from '@tanstack/react-router'
 
 import { useAccount } from '@/account'
+import type { ConversationSummary } from '@/conversation-types'
 
 type MainSidebarProps = {
   isCollapsed: boolean
   onCollapsedChange: (isCollapsed: boolean) => void
+  conversations: ConversationSummary[]
+  activeConversationId?: string
+  onSelectConversation: (id: string) => void
+  onNewConversation: () => void
 }
 
-export function MainSidebar({ isCollapsed, onCollapsedChange }: MainSidebarProps) {
+export function MainSidebar({
+  isCollapsed,
+  onCollapsedChange,
+  conversations,
+  activeConversationId,
+  onSelectConversation,
+  onNewConversation,
+}: MainSidebarProps) {
   const navigate = useNavigate()
   const { profile } = useAccount()
 
@@ -77,6 +97,34 @@ export function MainSidebar({ isCollapsed, onCollapsedChange }: MainSidebarProps
           </span>
           <span>Profile & settings</span>
         </Button>
+
+        <div className="sidebar-sessions-heading">
+          <span className="main-sidebar-label">Sessions</span>
+          <Button
+            isIconOnly
+            variant="ghost"
+            className="sidebar-new-session"
+            aria-label="Reset and start a new thread"
+            title="New thread"
+            onPress={onNewConversation}
+          >
+            <Plus aria-hidden="true" />
+          </Button>
+        </div>
+        <div className="sidebar-sessions" aria-label="Previous conversations">
+          {conversations.map((conversation) => (
+            <Button
+              key={conversation.id}
+              className={`sidebar-session${conversation.id === activeConversationId ? ' is-active' : ''}`}
+              variant="ghost"
+              aria-current={conversation.id === activeConversationId ? 'true' : undefined}
+              onPress={() => onSelectConversation(conversation.id)}
+            >
+              <Comment aria-hidden="true" />
+              <span>{conversation.title}</span>
+            </Button>
+          ))}
+        </div>
       </nav>
 
       <div className="sidebar-note">

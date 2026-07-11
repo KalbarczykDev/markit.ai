@@ -65,9 +65,32 @@ export const priceAlertSetting = sqliteTable('price_alert_setting', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 })
 
+export const conversationSession = sqliteTable('conversation_session', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  title: text('title').default('New conversation').notNull(),
+  productState: text('product_state'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+})
+
+export const conversationMessage = sqliteTable('conversation_message', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id')
+    .notNull()
+    .references(() => conversationSession.id, { onDelete: 'cascade' }),
+  realtimeItemId: text('realtime_item_id').notNull(),
+  role: text('role').notNull(),
+  content: text('content').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+})
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  conversations: many(conversationSession),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -76,4 +99,16 @@ export const sessionRelations = relations(session, ({ one }) => ({
 
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, { fields: [account.userId], references: [user.id] }),
+}))
+
+export const conversationSessionRelations = relations(conversationSession, ({ one, many }) => ({
+  user: one(user, { fields: [conversationSession.userId], references: [user.id] }),
+  messages: many(conversationMessage),
+}))
+
+export const conversationMessageRelations = relations(conversationMessage, ({ one }) => ({
+  conversation: one(conversationSession, {
+    fields: [conversationMessage.conversationId],
+    references: [conversationSession.id],
+  }),
 }))

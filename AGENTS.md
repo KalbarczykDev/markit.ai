@@ -54,6 +54,7 @@ Use `bun oxlint --type-aware` as the source of truth for linting and type analys
 - Use Tailwind v4 and the design tokens in `src/index.css`.
 - The primary interface is a voice orb plus a compact live agent-status indicator. Product cards are the only secondary surface: desktop results open in the right-hand panel and shift the orb left; viewports below 900px must use a controlled HeroUI v3 bottom `Drawer`.
 - Voice transport uses the same-origin `/api/realtime` WebSocket proxy to OpenAI's `gpt-realtime-2.1` model. Keep the API key server-side as the `OPENAI_API_KEY` Worker secret.
+- Authenticated voice conversations are persistent application-owned threads. D1 stores session metadata, user/assistant transcripts, and restorable product state; `/api/conversations` owns listing and creation. The selected conversation ID is passed to `/api/realtime`, prior transcript is restored into trusted session context, and realtime transcription events update the thread. Navigating back to Assistant must preserve the selected thread; only the explicit New thread/reset control creates a fresh one.
 - `src/product-agent.ts` owns the server-enforced ecommerce system prompt, AI SDK v7 tool definitions, input validation, and Exa result sanitization. Current product claims, discounts, delivery costs, and seller-reliability evidence must be grounded in `search_products` results.
 - Discovery is intentionally restrained: ask at most one high-impact missing constraint before the first search (for example shoe size, apparel size, compatibility, or destination). If the shopper says to proceed or has no preference, search immediately and do not repeat the question.
 - Seller reliability is a transparent evidence-completeness heuristic, not a certification. Cards show the score at the end with its evidence level; never represent it as guaranteed trustworthiness.
@@ -72,7 +73,7 @@ Use `bun oxlint --type-aware` as the source of truth for linting and type analys
 
 The Worker is named `markit-ai` and configured in `wrangler.toml`. `bun run build` emits `dist/server/wrangler.json`; deploy that generated configuration with Wrangler.
 
-`.github/workflows/deploy.yml` is the production CI/CD pipeline. Pull requests to `main` run the verification gate. Pushes to `main` and manual dispatches run the same gate and then deploy the already-built output, avoiding a duplicate install or build. The workflow uses the latest Bun canary, a frozen lockfile, Bun's package cache, least-privilege GitHub permissions, and concurrency cancellation for superseded runs.
+`.github/workflows/deploy.yml` is the production CI/CD pipeline. Pull requests to `main` run the verification gate. Pushes to `main` and manual dispatches run the same gate, apply pending D1 migrations, and then deploy the already-built output, avoiding a duplicate install or build. The workflow uses the latest Bun canary, a frozen lockfile, Bun's package cache, least-privilege GitHub permissions, and concurrency cancellation for superseded runs.
 
 GitHub Actions requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. Runtime secrets such as `OPENAI_API_KEY` and `EXA_API_KEY` remain Worker secrets and are preserved across deployments. Never write credential values into tracked files or workflow YAML.
 

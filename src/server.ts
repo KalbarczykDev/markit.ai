@@ -2,6 +2,14 @@ import type { DurableObjectNamespace } from '@cloudflare/workers-types'
 import handler from '@tanstack/react-start/server-entry'
 
 import { createAuth, handleAuthRequest, type AuthEnv } from './auth'
+import type { PersistedProductState } from './conversation-types'
+import {
+  conversationHistoryPrompt,
+  handleConversationsRequest,
+  loadConversation,
+  recordConversationMessage,
+  saveConversationProductState,
+} from './conversations'
 import { PriceAlertScheduler } from './price-alert-scheduler'
 import { handlePriceAlertsRequest } from './price-alerts'
 import {
@@ -12,11 +20,7 @@ import {
   saveListingsInputSchema,
   searchProducts,
 } from './product-agent'
-import {
-  analyzeProductListings,
-  productValidationInputSchema,
-  type ValidationContext,
-} from './product-analysis'
+import { analyzeProductListings, productValidationInputSchema } from './product-analysis'
 import type { ProductCardData, ProductSortMode } from './product-types'
 import { handleSavedListingsRequest, saveListings } from './saved-listings'
 
@@ -44,21 +48,20 @@ const startFetch = handler.fetch as unknown as (
 ) => Promise<Response>
 
 type RealtimeToolCall = {
-  type: 'response.function_call_arguments.done'
+  type: string
   name?: string
   call_id?: string
   arguments?: string
+  item_id?: string
+  transcript?: string
 }
 
-type ProductSessionState = {
-  latestProducts: ProductCardData[]
-  visibleProductUrls: string[]
+type ProductSessionState = PersistedProductState & {
   validationGeneration: number
-  validatedProductUrls: string[]
-  latestValidationContext: Pick<ValidationContext, 'requirements' | 'maxPrice' | 'currency'> | null
 }
 
 type ShopperContext = { userId: string | null }
+type ConversationPersistence = { database: NonNullable<Env['DB']>; conversationId: string }
 
 function sendJson(socket: WorkerWebSocket, value: unknown): void {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(value))
@@ -85,6 +88,8 @@ async function executeAgentTool(
   client: WorkerWebSocket,
   state: ProductSessionState,
   shopper: ShopperContext,
+  context: ExecutionContext,
+  persistence: ConversationPersistence | null,
 ): Promise<void> {
   if (!call.call_id) return
   sendJson(client, { type: 'markit.tool', phase: 'started', tool: call.name })
@@ -98,6 +103,7 @@ async function executeAgentTool(
       state.latestProducts = result.products
       state.visibleProductUrls = []
       state.validatedProductUrls = []
+      state.analyses = {}
       state.validationGeneration += 1
       state.latestValidationContext = {
         requirements: input.query,
@@ -132,6 +138,7 @@ async function executeAgentTool(
         env.OPENAI_API_KEY,
         (url, analysis) => {
           if (state.validationGeneration !== generation) return
+          state.analyses[url] = analysis
           sendJson(client, { type: 'markit.analysis', url, analysis })
         },
       )
@@ -161,6 +168,8 @@ async function executeAgentTool(
     } else if (call.name === 'control_product_display') {
       const input = productDisplayInputSchema.parse(JSON.parse(call.arguments || '{}'))
       if (input.action === 'close') {
+        state.visibleProductUrls = []
+        state.display = null
         sendJson(client, { type: 'markit.products', action: 'close' })
         output = { displayed: false, productCount: 0 }
       } else {
@@ -187,6 +196,7 @@ async function executeAgentTool(
         ).slice(0, 6)
         if (!products.length) throw new Error('No researched products are available to display')
         state.visibleProductUrls = products.map((product) => product.url)
+        state.display = { heading: input.heading || 'Current picks', view, sort }
         sendJson(client, {
           type: 'markit.products',
           action: 'show',
@@ -237,6 +247,12 @@ async function executeAgentTool(
     }
   }
 
+  if (persistence) {
+    context.waitUntil(
+      saveConversationProductState(persistence.database, persistence.conversationId, state),
+    )
+  }
+
   sendJson(upstream, {
     type: 'conversation.item.create',
     item: {
@@ -268,9 +284,23 @@ async function realtimeSocket(
   }
 
   const toolDefinitions = await getProductToolDefinitions()
-  const productSystemPrompt = productSystemPromptForCountry(request.headers.get('cf-ipcountry'))
   const auth = createAuth(request, env)
   const authSession = auth ? await auth.api.getSession({ headers: request.headers }) : null
+  const requestedConversationId = new URL(request.url).searchParams.get('conversationId')
+  const loadedConversation =
+    requestedConversationId && env.DB && authSession?.user
+      ? await loadConversation(env.DB, authSession.user.id, requestedConversationId)
+      : null
+  if (requestedConversationId && !loadedConversation) {
+    return new Response('Conversation not found', { status: 404 })
+  }
+  const productSystemPrompt =
+    productSystemPromptForCountry(request.headers.get('cf-ipcountry')) +
+    conversationHistoryPrompt(loadedConversation?.messages ?? [])
+  const persistence: ConversationPersistence | null =
+    loadedConversation && env.DB
+      ? { database: env.DB, conversationId: loadedConversation.conversation.id }
+      : null
 
   const openAIResponse = (await fetch('https://api.openai.com/v1/realtime?model=gpt-realtime-2.1', {
     headers: {
@@ -292,12 +322,15 @@ async function realtimeSocket(
   server.accept()
   const handledToolCalls = new Set<string>()
   const productState: ProductSessionState = {
-    latestProducts: [],
-    visibleProductUrls: [],
+    latestProducts: loadedConversation?.productState?.latestProducts ?? [],
+    visibleProductUrls: loadedConversation?.productState?.visibleProductUrls ?? [],
     validationGeneration: 0,
-    validatedProductUrls: [],
-    latestValidationContext: null,
+    validatedProductUrls: loadedConversation?.productState?.validatedProductUrls ?? [],
+    latestValidationContext: loadedConversation?.productState?.latestValidationContext ?? null,
+    display: loadedConversation?.productState?.display ?? null,
+    analyses: loadedConversation?.productState?.analyses ?? {},
   }
+  let restoredClientState = false
   const toolReadyResolvers = new Map<string, () => void>()
   const waitForToolReady = (callId: string) =>
     new Promise<void>((resolve) => {
@@ -347,6 +380,38 @@ async function realtimeSocket(
     if (typeof event.data !== 'string') return
     try {
       const message = JSON.parse(event.data) as RealtimeToolCall
+      if (message.type === 'session.updated' && !restoredClientState) {
+        restoredClientState = true
+        if (productState.display && productState.visibleProductUrls.length) {
+          const visible = new Set(productState.visibleProductUrls)
+          sendJson(server, {
+            type: 'markit.products',
+            action: 'show',
+            ...productState.display,
+            products: productState.latestProducts.filter((product) => visible.has(product.url)),
+          })
+          for (const [url, analysis] of Object.entries(productState.analyses)) {
+            sendJson(server, { type: 'markit.analysis', url, analysis })
+          }
+        }
+      }
+      const transcriptRole =
+        message.type === 'conversation.item.input_audio_transcription.completed'
+          ? 'user'
+          : message.type === 'response.output_audio_transcript.done'
+            ? 'assistant'
+            : null
+      if (persistence && transcriptRole && message.item_id && message.transcript) {
+        context.waitUntil(
+          recordConversationMessage(
+            persistence.database,
+            persistence.conversationId,
+            message.item_id,
+            transcriptRole,
+            message.transcript,
+          ).then(() => sendJson(server, { type: 'markit.conversation.updated' })),
+        )
+      }
       if (
         message.type === 'response.function_call_arguments.done' &&
         (message.name === 'search_products' ||
@@ -366,9 +431,16 @@ async function realtimeSocket(
         })
         context.waitUntil(
           ready.then(() =>
-            executeAgentTool(message, env, upstream, server, productState, {
-              userId: authSession?.user.id ?? null,
-            }),
+            executeAgentTool(
+              message,
+              env,
+              upstream,
+              server,
+              productState,
+              { userId: authSession?.user.id ?? null },
+              context,
+              persistence,
+            ),
           ),
         )
       }
@@ -399,6 +471,9 @@ export default {
     if (url.pathname === '/api/realtime') return realtimeSocket(request, env, context)
     if (url.pathname.startsWith('/api/auth/')) return handleAuthRequest(request, env)
     if (url.pathname === '/api/listings') return handleSavedListingsRequest(request, env)
+    if (url.pathname.startsWith('/api/conversations')) {
+      return handleConversationsRequest(request, env)
+    }
     if (url.pathname === '/api/price-alerts') return handlePriceAlertsRequest(request, env)
     return startFetch(request, env, context)
   },

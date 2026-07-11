@@ -1,4 +1,3 @@
-import { Button } from '@heroui/react'
 import { useEffect, useRef, useState } from 'react'
 
 import type {
@@ -10,9 +9,8 @@ import type {
 import { INPUT_RATE, base64ToPcm, bytesToBase64, floatToPcm16, resample } from '@/realtime-audio'
 import type { SavedListing } from '@/saved-listing-types'
 
-import { MicrophoneMuteButton } from './MicrophoneMuteButton'
-import { ProductResults } from './ProductResults'
-import { type OrbState, VoiceStatus } from './VoiceStatus'
+import { VoiceOrbSurface } from './VoiceOrbSurface'
+import type { OrbState } from './VoiceStatus'
 
 type AudioRuntime = {
   context: AudioContext
@@ -50,7 +48,12 @@ type RealtimeMessage = {
   response?: { id?: string }
 }
 
-export function VoiceOrb() {
+type VoiceOrbProps = {
+  conversationId?: string
+  onConversationUpdated: () => void
+}
+
+export function VoiceOrb({ conversationId, onConversationUpdated }: VoiceOrbProps) {
   const [state, setState] = useState<OrbState>('idle')
   const [isMuted, setIsMuted] = useState(false)
   const [productDisplay, setProductDisplay] = useState<{
@@ -262,7 +265,8 @@ export function VoiceOrb() {
       audioRef.current = { context, stream, source, processor, silentGain }
 
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const socket = new WebSocket(`${protocol}//${location.host}/api/realtime`)
+      const query = conversationId ? `?conversationId=${encodeURIComponent(conversationId)}` : ''
+      const socket = new WebSocket(`${protocol}//${location.host}/api/realtime${query}`)
       socketRef.current = socket
 
       socket.addEventListener('open', () => {
@@ -278,9 +282,12 @@ export function VoiceOrb() {
               audio: {
                 input: {
                   format: { type: 'audio/pcm', rate: INPUT_RATE },
+                  transcription: { model: 'gpt-realtime-whisper', delay: 'low' },
                   turn_detection: {
-                    type: 'semantic_vad',
-                    eagerness: 'high',
+                    type: 'server_vad',
+                    threshold: 0.55,
+                    prefix_padding_ms: 300,
+                    silence_duration_ms: 500,
                     create_response: true,
                     interrupt_response: true,
                   },
@@ -378,6 +385,8 @@ export function VoiceOrb() {
           if (url && analysis) {
             setAnalyses((previous) => ({ ...previous, [url]: analysis }))
           }
+        } else if (message.type === 'markit.conversation.updated') {
+          onConversationUpdated()
         } else if (message.type === 'markit.listings' && message.listings?.length) {
           setSavedUrls((previous) => {
             const updated = new Set(previous)
@@ -444,48 +453,16 @@ export function VoiceOrb() {
     }
   }
 
-  const label =
-    state === 'idle'
-      ? 'Start voice conversation'
-      : state === 'error'
-        ? 'Voice unavailable. Try again'
-        : 'End voice conversation'
   return (
-    <div className={`commerce-agent ${productDisplay.isOpen ? 'has-products' : ''}`}>
-      <div className="voice-agent">
-        <Button
-          ref={orbRef}
-          type="button"
-          isIconOnly
-          variant="ghost"
-          className="voice-orb"
-          data-state={state}
-          aria-label={label}
-          title={label}
-          onPress={() => void start()}
-        >
-          <span className="orb-halo" />
-          <span className="orb-shell">
-            <span className="orb-core" />
-            <span className="orb-wave" />
-          </span>
-        </Button>
-        <div className="voice-controls">
-          <VoiceStatus state={state} />
-          {state !== 'idle' ? (
-            <MicrophoneMuteButton isMuted={isMuted} onToggle={toggleMute} />
-          ) : null}
-        </div>
-      </div>
-      <ProductResults
-        isOpen={productDisplay.isOpen}
-        heading={productDisplay.heading}
-        products={productDisplay.products}
-        analyses={analyses}
-        savedUrls={savedUrls}
-        view={productDisplay.view}
-        sort={productDisplay.sort}
-      />
-    </div>
+    <VoiceOrbSurface
+      orbRef={orbRef}
+      state={state}
+      isMuted={isMuted}
+      onStart={() => void start()}
+      onToggleMute={toggleMute}
+      productDisplay={productDisplay}
+      analyses={analyses}
+      savedUrls={savedUrls}
+    />
   )
 }
