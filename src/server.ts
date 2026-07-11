@@ -144,7 +144,11 @@ async function executeAgentTool(
         } else {
           const favorites = await saveFavoriteListings(env.DB, shopper.userId, products)
           sendJson(client, { type: 'markit.favorites', favorites })
-          output = { saved: true, favoriteCount: favorites.length }
+          output = {
+            saved: true,
+            favoriteCount: favorites.length,
+            location: 'Account → Profile & settings → Favorite listings',
+          }
         }
       }
     } else {

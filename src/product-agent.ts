@@ -2,6 +2,7 @@ import { experimental_getRealtimeToolDefinitions, tool } from 'ai'
 import { z } from 'zod'
 
 import { resolveCountryMarket } from './product-markets'
+import { isPurchasableProductPage } from './product-result-filter'
 import type { ProductCardData } from './product-types'
 
 export const PRODUCT_SYSTEM_PROMPT = `# Role and objective
@@ -34,6 +35,14 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 # Scope
 - Stay focused on shopping, products, retailers, and ecommerce decisions.
 - If a request is unrelated, briefly explain that you specialize in product research and ask what product the user wants help finding.
+
+# Interface map
+- The home screen centers the voice orb and compact status. Product cards appear in a right-side panel on desktop and a bottom drawer on mobile; control_product_display manages both automatically.
+- Each product card shows price, discount, delivery, independent checks, seller reliability, a "View details" disclosure, and a "View product" retailer link.
+- A successfully saved result shows a "Saved" badge on its product card.
+- Saved listings live under Account → Profile & settings → Favorite listings. After save_favorite_products succeeds, tell the shopper this exact path in their current language.
+- Plan, purchase status, and Stripe billing controls live under Account → Profile & settings → Plan & billing.
+- You may explain where controls are, but never claim you clicked, opened, or navigated UI unless the corresponding tool succeeded.
 
 # Discovery questions
 - You MUST ask a discovery question when the request is ambiguous and one missing detail would materially change which products qualify. Do not guess a critical constraint.
@@ -168,7 +177,7 @@ const productTools = {
   search_products: tool({
     title: 'Agentic product search',
     description:
-      'Run Exa deep agentic search over the live web for current products, prices, shipping, availability, returns, warranty, specifications, seller evidence, and reviews. Use before every current product claim.',
+      'Run Exa deep agentic search for individual, directly purchasable product pages only. Articles, blogs, reviews, guides, rankings, comparisons, news, category pages, and other editorial content are forbidden.',
     inputSchema: productSearchInputSchema,
     strict: true,
   }),
@@ -385,13 +394,15 @@ export async function searchProducts(
   const currencyPreference = effectiveCurrency
     ? ` prices and checkout in ${effectiveCurrency} local currency`
     : ''
-  const searchQuery = `${parsed.query}${market}${currencyPreference}${budget ? ` hard price range ${budget}` : ''} current price original price discount sale shipping delivery cost availability returns warranty seller reviews reliability buy retailer product`
+  const searchQuery = `${parsed.query}${market}${currencyPreference}${budget ? ` hard price range ${budget}` : ''} individual purchasable product detail page direct retailer offer current price original price discount shipping delivery availability returns warranty add to cart. Exclude articles blogs reviews guides rankings comparisons news category pages and editorial content.`
   const response = await fetch('https://api.exa.ai/search', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': exaApiKey },
     body: JSON.stringify({
       query: searchQuery,
       type: 'deep',
+      systemPrompt:
+        'Return ONLY individual product detail or retailer offer pages where one real product can be purchased. Never return articles, blogs, reviews, buying guides, rankings, comparisons, news, category/search pages, or editorial content.',
       numResults:
         parsed.minPrice !== undefined || parsed.maxPrice !== undefined
           ? 8
@@ -414,6 +425,15 @@ export async function searchProducts(
       .filter(Boolean)
       .slice(0, 4)
     const price = findPrice(highlights, effectiveCurrency)
+    if (
+      !isPurchasableProductPage({
+        title,
+        url,
+        highlights,
+        hasVerifiedPrice: Boolean(price),
+      })
+    )
+      return []
     const discount = findEvidence(highlights, DISCOUNT_PATTERN, 110)
     const shipping = findEvidence(highlights, SHIPPING_PATTERN, 150)
     const reliability = sellerReliability(
@@ -461,9 +481,11 @@ export async function searchProducts(
         ? { minPrice: parsed.minPrice, maxPrice: parsed.maxPrice, currency: effectiveCurrency }
         : undefined,
     products: matchingProducts,
-    ...(matchingProducts.length === 0 &&
-    (parsed.minPrice !== undefined || parsed.maxPrice !== undefined)
-      ? { message: 'No product with a verified current price matched the requested range.' }
+    ...(matchingProducts.length === 0
+      ? {
+          message:
+            'No verified, directly purchasable product page matched every requested constraint.',
+        }
       : {}),
   }
 }
