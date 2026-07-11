@@ -11,6 +11,15 @@ CREATE TABLE IF NOT EXISTS `price_alert_setting` (
   FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON UPDATE no action ON DELETE cascade
 );
 
-ALTER TABLE `favorite_listing` ADD COLUMN `alert_price_value` real;
-ALTER TABLE `favorite_listing` ADD COLUMN `alert_currency` text;
-ALTER TABLE `favorite_listing` ADD COLUMN `alert_checked_at` integer;
+CREATE TABLE IF NOT EXISTS `price_alert_listing_state` (
+  `listing_id` text PRIMARY KEY NOT NULL,
+  `user_id` text NOT NULL,
+  `price_value` real NOT NULL,
+  `currency` text NOT NULL,
+  `checked_at` integer NOT NULL,
+  FOREIGN KEY (`listing_id`) REFERENCES `favorite_listing` (`id`) ON UPDATE no action ON DELETE cascade,
+  FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON UPDATE no action ON DELETE cascade
+);
+
+CREATE INDEX IF NOT EXISTS `price_alert_listing_state_user_idx`
+  ON `price_alert_listing_state` (`user_id`);

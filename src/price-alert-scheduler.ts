@@ -34,8 +34,8 @@ type ListingRow = {
   title: string
   url: string
   price: string | null
-  alert_price_value: number | null
-  alert_currency: string | null
+  observed_price_value: number | null
+  observed_currency: string | null
 }
 
 type PriceResult = z.infer<typeof searchResultSchema>['results'][number]
@@ -156,8 +156,11 @@ async function checkSavedListings(
 ): Promise<void> {
   if (!env.OPENAI_API_KEY || !env.TELEGRAM_BOT_TOKEN) return
   const query = await env.DB.prepare(
-    `SELECT id, title, url, price, alert_price_value, alert_currency
-     FROM favorite_listing WHERE user_id = ? ORDER BY updated_at DESC LIMIT 20`,
+    `SELECT f.id, f.title, f.url, f.price,
+            s.price_value AS observed_price_value, s.currency AS observed_currency
+     FROM favorite_listing f
+     LEFT JOIN price_alert_listing_state s ON s.listing_id = f.id
+     WHERE f.user_id = ? ORDER BY f.updated_at DESC LIMIT 20`,
   )
     .bind(userId)
     .all<ListingRow>()
@@ -171,8 +174,8 @@ async function checkSavedListings(
     const result = researched.get(listing.id)
     if (result?.status !== 'found' || result.currentPrice === null || !result.currency) continue
     const baseline =
-      listing.alert_price_value !== null && listing.alert_currency
-        ? { value: listing.alert_price_value, currency: listing.alert_currency }
+      listing.observed_price_value !== null && listing.observed_currency
+        ? { value: listing.observed_price_value, currency: listing.observed_currency }
         : initialPrice(listing.price)
     if (baseline && baseline.currency === result.currency && result.currentPrice < baseline.value) {
       drops.push(
@@ -192,10 +195,14 @@ async function checkSavedListings(
   await Promise.all(
     updates.map((update) =>
       env.DB.prepare(
-        `UPDATE favorite_listing SET alert_price_value = ?, alert_currency = ?, alert_checked_at = ?
-         WHERE id = ? AND user_id = ?`,
+        `INSERT INTO price_alert_listing_state
+          (listing_id, user_id, price_value, currency, checked_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(listing_id) DO UPDATE SET
+           price_value = excluded.price_value,
+           currency = excluded.currency,
+           checked_at = excluded.checked_at`,
       )
-        .bind(update.price, update.currency, Date.now(), update.id, userId)
+        .bind(update.id, userId, update.price, update.currency, Date.now())
         .run(),
     ),
   )
