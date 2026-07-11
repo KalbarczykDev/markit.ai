@@ -1449,6 +1449,37 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
+
+  .slide-demo {
+    background: radial-gradient(circle at 82% 20%, rgba(148, 178, 32, 0.14), transparent 30rem);
+  }
+
+  .demo-cta {
+    display: flex;
+    align-items: center;
+    gap: clamp(1.75rem, 3.5vw, 3.5rem);
+  }
+
+  .demo-qr {
+    width: clamp(11rem, 19vw, 16rem);
+    padding: clamp(0.9rem, 1.6vw, 1.4rem);
+    border: 1px solid rgba(23, 23, 29, 0.09);
+    border-radius: var(--radius-md);
+    background: var(--white);
+    box-shadow: var(--shadow);
+  }
+
+  .demo-copy h3 {
+    margin-bottom: 0.45rem;
+  }
+
+  .demo-url {
+    margin: 0;
+    color: var(--violet);
+    font-size: clamp(1.05rem, 1.7vw, 1.6rem);
+    font-weight: 680;
+    letter-spacing: -0.015em;
+  }
 }
 
 @layer responsive {
