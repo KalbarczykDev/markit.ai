@@ -1,6 +1,9 @@
+import type { DurableObjectNamespace } from '@cloudflare/workers-types'
 import handler from '@tanstack/react-start/server-entry'
 
 import { createAuth, handleAuthRequest, type AuthEnv } from './auth'
+import { PriceAlertScheduler } from './price-alert-scheduler'
+import { handlePriceAlertsRequest } from './price-alerts'
 import {
   getProductToolDefinitions,
   productSystemPromptForCountry,
@@ -21,7 +24,11 @@ type ExecutionContext = {
 type Env = AuthEnv & {
   OPENAI_API_KEY?: string
   EXA_API_KEY?: string
+  TELEGRAM_BOT_TOKEN?: string
+  ALERT_SCHEDULER?: DurableObjectNamespace
 }
+
+export { PriceAlertScheduler }
 
 type WorkerWebSocket = WebSocket & { accept(): void }
 type WebSocketPairConstructor = new () => { 0: WorkerWebSocket; 1: WorkerWebSocket }
@@ -330,6 +337,7 @@ export default {
     if (url.pathname === '/api/realtime') return realtimeSocket(request, env, context)
     if (url.pathname.startsWith('/api/auth/')) return handleAuthRequest(request, env)
     if (url.pathname === '/api/listings') return handleSavedListingsRequest(request, env)
+    if (url.pathname === '/api/price-alerts') return handlePriceAlertsRequest(request, env)
     return startFetch(request, env, context)
   },
 }

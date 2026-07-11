@@ -192,6 +192,13 @@ function ProfilePage() {
                     <Switch.Thumb />
                   </Switch.Control>
                 </Switch>
+                <Button
+                  variant="secondary"
+                  className="manage-alerts-button"
+                  onPress={() => void navigate({ to: '/alerts' })}
+                >
+                  Configure Telegram alerts
+                </Button>
               </Card.Content>
             </Card>
           </div>

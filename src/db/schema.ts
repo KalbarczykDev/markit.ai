@@ -53,6 +53,18 @@ export const verification = sqliteTable('verification', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }),
 })
 
+export const priceAlertSetting = sqliteTable('price_alert_setting', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  enabled: integer('enabled', { mode: 'boolean' }).default(false).notNull(),
+  telegramChatId: text('telegram_chat_id').notNull(),
+  intervalValue: integer('interval_value').default(15).notNull(),
+  intervalUnit: text('interval_unit').default('minutes').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+})
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),

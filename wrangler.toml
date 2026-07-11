@@ -12,6 +12,10 @@ database_name = "markit-ai-users"
 database_id = "b48bb8a6-d233-4b4b-85a6-5a1f0f8b344c"
 migrations_dir = "migrations"
 
+[[durable_objects.bindings]]
+name = "ALERT_SCHEDULER"
+class_name = "PriceAlertScheduler"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["AccountStore"]
@@ -19,6 +23,10 @@ new_sqlite_classes = ["AccountStore"]
 [[migrations]]
 tag = "v2"
 deleted_classes = ["AccountStore"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["PriceAlertScheduler"]
 
 [observability]
 enabled = true
