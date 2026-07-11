@@ -1,4 +1,4 @@
-import { Button, Spinner } from '@heroui/react'
+import { Button } from '@heroui/react'
 import { useEffect, useRef, useState } from 'react'
 
 import type {
@@ -10,17 +10,9 @@ import type {
 import { INPUT_RATE, base64ToPcm, bytesToBase64, floatToPcm16, resample } from '@/realtime-audio'
 import type { SavedListing } from '@/saved-listing-types'
 
+import { MicrophoneMuteButton } from './MicrophoneMuteButton'
 import { ProductResults } from './ProductResults'
-
-type OrbState =
-  | 'idle'
-  | 'connecting'
-  | 'listening'
-  | 'thinking'
-  | 'searching'
-  | 'speaking'
-  | 'search-error'
-  | 'error'
+import { type OrbState, VoiceStatus } from './VoiceStatus'
 
 type AudioRuntime = {
   context: AudioContext
@@ -58,19 +50,9 @@ type RealtimeMessage = {
   response?: { id?: string }
 }
 
-const STATUS_LABELS: Record<OrbState, string> = {
-  idle: 'Tap to talk',
-  connecting: 'Connecting',
-  listening: 'Listening',
-  thinking: 'Checking product data',
-  searching: 'Researching products',
-  speaking: 'Speaking',
-  'search-error': 'Search unavailable',
-  error: 'Connection unavailable',
-}
-
 export function VoiceOrb() {
   const [state, setState] = useState<OrbState>('idle')
+  const [isMuted, setIsMuted] = useState(false)
   const [productDisplay, setProductDisplay] = useState<{
     isOpen: boolean
     heading: string
@@ -94,6 +76,7 @@ export function VoiceOrb() {
   const pendingToolCallRef = useRef<string | null>(null)
   const sessionReadyRef = useRef(false)
   const runningRef = useRef(false)
+  const mutedRef = useRef(false)
   const mountedRef = useRef(true)
 
   const setLevel = (level: number) => {
@@ -238,6 +221,8 @@ export function VoiceOrb() {
       return
     }
 
+    mutedRef.current = false
+    setIsMuted(false)
     runningRef.current = true
     setState('connecting')
     try {
@@ -253,6 +238,7 @@ export function VoiceOrb() {
         for (const track of stream.getTracks()) track.stop()
         return
       }
+      for (const track of stream.getAudioTracks()) track.enabled = !mutedRef.current
 
       const context = new AudioContext()
       const playbackContext = new AudioContext({ sampleRate: INPUT_RATE })
@@ -409,7 +395,13 @@ export function VoiceOrb() {
       })
 
       processor.addEventListener('audioprocess', (event) => {
-        if (!runningRef.current || !sessionReadyRef.current || socketRef.current !== socket) return
+        if (
+          !runningRef.current ||
+          !sessionReadyRef.current ||
+          mutedRef.current ||
+          socketRef.current !== socket
+        )
+          return
         const input = event.inputBuffer.getChannelData(0)
         let sum = 0
         for (const sample of input) sum += sample * sample
@@ -431,14 +423,25 @@ export function VoiceOrb() {
     }
   }
 
+  const toggleMute = () => {
+    const nextMuted = !mutedRef.current
+    mutedRef.current = nextMuted
+    setIsMuted(nextMuted)
+    for (const track of audioRef.current?.stream.getAudioTracks() ?? []) track.enabled = !nextMuted
+    if (nextMuted) {
+      setLevel(0.08)
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({ type: 'input_audio_buffer.clear' }))
+      }
+    }
+  }
+
   const label =
     state === 'idle'
       ? 'Start voice conversation'
       : state === 'error'
         ? 'Voice unavailable. Try again'
         : 'End voice conversation'
-  const isPending = state === 'connecting' || state === 'thinking' || state === 'searching'
-
   return (
     <div className={`commerce-agent ${productDisplay.isOpen ? 'has-products' : ''}`}>
       <div className="voice-agent">
@@ -459,13 +462,11 @@ export function VoiceOrb() {
             <span className="orb-wave" />
           </span>
         </Button>
-        <div className="agent-status" data-state={state} role="status" aria-live="polite">
-          {isPending ? (
-            <Spinner size="sm" color="current" />
-          ) : (
-            <span className="agent-status-dot" />
-          )}
-          <span>{STATUS_LABELS[state]}</span>
+        <div className="voice-controls">
+          <VoiceStatus state={state} />
+          {state !== 'idle' ? (
+            <MicrophoneMuteButton isMuted={isMuted} onToggle={toggleMute} />
+          ) : null}
         </div>
       </div>
       <ProductResults

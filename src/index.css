@@ -487,6 +487,37 @@ button {
     opacity 200ms ease;
 }
 
+.voice-controls {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.mic-mute-button {
+  width: 2.25rem !important;
+  min-width: 2.25rem !important;
+  height: 2.25rem !important;
+  min-height: 2.25rem !important;
+  padding: 0 !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 999px !important;
+  color: var(--text-secondary) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.mic-mute-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.mic-mute-button[data-muted='true'] {
+  border-color: color-mix(in oklab, var(--accent) 58%, var(--border)) !important;
+  color: var(--accent-soft-foreground) !important;
+  background: var(--accent-soft) !important;
+}
+
 .agent-status .spinner {
   width: 0.78rem;
   height: 0.78rem;
