@@ -1,7 +1,13 @@
-import { Card, Drawer, Link } from '@heroui/react'
+import { Card, Drawer, Link, Meter } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
 import type { ProductAnalysis, ProductCardData } from '@/product-types'
+
+const RELIABILITY_COLOR = {
+  strong: 'accent',
+  moderate: 'default',
+  limited: 'warning',
+} as const
 
 function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(false)
@@ -112,17 +118,22 @@ function ProductCards({
             <Card.Footer className="product-footer">
               <div
                 className="seller-reliability"
-                data-level={product.sellerReliability.label}
                 title={product.sellerReliability.basis.join(' • ')}
               >
-                <div className="seller-reliability-row">
-                  <span>Seller reliability</span>
-                  <strong>{product.sellerReliability.score}/100</strong>
-                </div>
-                <div className="seller-reliability-track" aria-hidden="true">
-                  <i style={{ width: `${product.sellerReliability.score}%` }} />
-                </div>
-                <small>{product.sellerReliability.label} evidence score</small>
+                <Meter
+                  value={product.sellerReliability.score}
+                  color={RELIABILITY_COLOR[product.sellerReliability.label]}
+                  aria-label="Seller reliability"
+                >
+                  <div className="seller-reliability-row">
+                    <span>Seller reliability</span>
+                    <Meter.Output>{product.sellerReliability.score}/100</Meter.Output>
+                  </div>
+                  <Meter.Track>
+                    <Meter.Fill />
+                  </Meter.Track>
+                  <small>{product.sellerReliability.label} evidence score</small>
+                </Meter>
               </div>
               <Link
                 href={product.url}

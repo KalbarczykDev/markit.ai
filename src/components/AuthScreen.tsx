@@ -1,4 +1,4 @@
-import { Button, Card, Input, Spinner } from '@heroui/react'
+import { Alert, Button, Card, Form, Input, Label, Spinner, TextField } from '@heroui/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
 
@@ -49,40 +49,43 @@ export function AuthScreen() {
 
         <Card className="auth-card">
           <Card.Content>
-            <form className="auth-form" onSubmit={submit}>
-              <label>
-                <span>Email address</span>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.currentTarget.value)}
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  required
-                  autoFocus
-                />
-              </label>
-              <label>
-                <span>Password</span>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.currentTarget.value)}
-                  autoComplete="current-password"
-                  placeholder="Your password"
-                  maxLength={128}
-                  required
-                />
-              </label>
+            <Form className="auth-form" onSubmit={submit}>
+              <TextField
+                type="email"
+                value={email}
+                onChange={setEmail}
+                autoComplete="email"
+                isRequired
+                autoFocus
+              >
+                <Label>Email address</Label>
+                <Input placeholder="you@example.com" />
+              </TextField>
+              <TextField
+                type="password"
+                value={password}
+                onChange={setPassword}
+                autoComplete="current-password"
+                maxLength={128}
+                isRequired
+              >
+                <Label>Password</Label>
+                <Input placeholder="Your password" />
+              </TextField>
 
-              <div className="auth-error" role="alert">
-                {error}
-              </div>
+              {error ? (
+                <Alert status="danger" className="auth-alert" role="alert">
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Description>{error}</Alert.Description>
+                  </Alert.Content>
+                </Alert>
+              ) : null}
               <Button type="submit" fullWidth className="auth-submit" isDisabled={isSubmitting}>
                 {isSubmitting ? <Spinner size="sm" color="current" /> : null}
                 {isSubmitting ? 'Logging in…' : 'Log in'}
               </Button>
-            </form>
+            </Form>
           </Card.Content>
         </Card>
 

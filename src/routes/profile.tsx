@@ -1,4 +1,15 @@
-import { Avatar, Button, Card, Chip, Input, Switch } from '@heroui/react'
+import {
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  Input,
+  Label,
+  Radio,
+  RadioGroup,
+  Switch,
+  TextField,
+} from '@heroui/react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
 
@@ -11,6 +22,163 @@ const THEMES: Array<{ id: ThemePreference; label: string; description: string }>
   { id: 'light', label: 'Light', description: 'Bright and airy' },
   { id: 'dark', label: 'Dark', description: 'Easy on the eyes' },
 ]
+
+type BillingProduct = {
+  id: string
+  name: string
+  description: string | null
+  price: number | null
+  currency: string
+  recurring: { interval: string; intervalCount: number } | null
+}
+
+async function billingRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, { ...init, credentials: 'same-origin' })
+  const body = (await response.json()) as T & { message?: string }
+  if (!response.ok) throw new Error(body.message || 'The billing request could not be completed.')
+  return body
+}
+
+function BillingCard() {
+  const { profile, refreshProfile } = useAccount()
+  const [product, setProduct] = useState<BillingProduct | null>(null)
+  const [isRedirecting, setIsRedirecting] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [billingError, setBillingError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    void billingRequest<{ product: BillingProduct }>('/api/billing/product')
+      .then((result) => {
+        if (active) setProduct(result.product)
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setBillingError(error instanceof Error ? error.message : 'Billing is unavailable.')
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search)
+    const checkout = search.get('checkout')
+    const sessionId = search.get('session_id')
+    if (checkout === 'cancelled') {
+      setNotice('Checkout cancelled. You were not charged.')
+      window.history.replaceState({}, '', '/profile')
+      return
+    }
+    if (checkout !== 'success' || !sessionId) return
+
+    setNotice('Confirming your payment…')
+    void billingRequest<{ paymentStatus: string }>(
+      `/api/billing/session?session_id=${encodeURIComponent(sessionId)}`,
+    )
+      .then(async ({ paymentStatus }) => {
+        await refreshProfile()
+        setNotice(
+          paymentStatus === 'paid' || paymentStatus === 'no_payment_required'
+            ? 'Payment confirmed. Your purchase is active.'
+            : 'Checkout completed. Payment confirmation is pending.',
+        )
+        window.history.replaceState({}, '', '/profile')
+      })
+      .catch((error: unknown) => {
+        setBillingError(error instanceof Error ? error.message : 'Unable to confirm payment.')
+      })
+  }, [refreshProfile])
+
+  const redirectTo = async (path: '/api/billing/checkout' | '/api/billing/portal') => {
+    setIsRedirecting(true)
+    setBillingError('')
+    try {
+      const { url } = await billingRequest<{ url: string }>(path, { method: 'POST' })
+      window.location.assign(url)
+    } catch (error) {
+      setBillingError(error instanceof Error ? error.message : 'Unable to open Stripe checkout.')
+      setIsRedirecting(false)
+    }
+  }
+
+  const active = profile?.billingStatus === 'active'
+  const canManage = active && Boolean(product?.recurring)
+  const price =
+    product?.price === null || product?.price === undefined
+      ? null
+      : new Intl.NumberFormat('en', {
+          style: 'currency',
+          currency: product.currency,
+        }).format(product.price / 100)
+  const cadence = product?.recurring
+    ? ` every ${product.recurring.intervalCount > 1 ? `${product.recurring.intervalCount} ` : ''}${product.recurring.interval}${product.recurring.intervalCount > 1 ? 's' : ''}`
+    : ''
+
+  return (
+    <Card className="settings-card">
+      <Card.Header>
+        <div>
+          <Card.Title>Plan & billing</Card.Title>
+          <Card.Description>
+            Secure payment processing and receipts through Stripe.
+          </Card.Description>
+        </div>
+        <Chip color={active ? 'success' : 'default'} variant="soft" size="sm">
+          {active ? 'Active' : 'Not active'}
+        </Chip>
+      </Card.Header>
+      <Card.Content>
+        <div className="grid gap-4">
+          <div className="grid gap-1">
+            <strong>{product?.name || 'Loading plan…'}</strong>
+            {product?.description ? (
+              <p className="m-0 text-sm opacity-70">{product.description}</p>
+            ) : null}
+            {price ? (
+              <p className="m-0 text-sm">
+                <strong>{price}</strong>
+                {cadence}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span
+              className="text-sm"
+              role="status"
+              aria-live="polite"
+              data-error={Boolean(billingError)}
+            >
+              {billingError || notice}
+            </span>
+            <Button
+              className={active ? undefined : 'save-profile-button'}
+              variant={active ? 'ghost' : undefined}
+              isDisabled={
+                Boolean(billingError && !product) ||
+                !product ||
+                isRedirecting ||
+                (active && !canManage)
+              }
+              onPress={() =>
+                void redirectTo(canManage ? '/api/billing/portal' : '/api/billing/checkout')
+              }
+            >
+              {isRedirecting
+                ? 'Opening Stripe…'
+                : canManage
+                  ? 'Manage billing'
+                  : active
+                    ? 'Purchased'
+                    : 'Continue to checkout'}
+            </Button>
+          </div>
+        </div>
+      </Card.Content>
+    </Card>
+  )
+}
 
 function initials(name: string) {
   return name
@@ -102,9 +270,6 @@ function ProfilePage() {
                   <span className="eyebrow">Markit wallet</span>
                   <Card.Title>{wallet}</Card.Title>
                 </div>
-                <span className="wallet-icon" aria-hidden="true">
-                  ◇
-                </span>
               </Card.Header>
               <Card.Description>
                 Available credit for eligible purchases and rewards.
@@ -117,6 +282,8 @@ function ProfilePage() {
           </aside>
 
           <div className="profile-settings">
+            <BillingCard />
+
             <Card className="settings-card">
               <Card.Header>
                 <div>
@@ -128,25 +295,14 @@ function ProfilePage() {
               </Card.Header>
               <Card.Content>
                 <form className="profile-form" onSubmit={saveProfile}>
-                  <label>
-                    <span>Display name</span>
-                    <Input
-                      value={name}
-                      onChange={(event) => setName(event.currentTarget.value)}
-                      placeholder="Your name"
-                      aria-label="Display name"
-                    />
-                  </label>
-                  <label>
-                    <span>Email address</span>
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.currentTarget.value)}
-                      placeholder="you@example.com"
-                      aria-label="Email address"
-                    />
-                  </label>
+                  <TextField value={name} onChange={setName}>
+                    <Label>Display name</Label>
+                    <Input placeholder="Your name" />
+                  </TextField>
+                  <TextField type="email" value={email} onChange={setEmail}>
+                    <Label>Email address</Label>
+                    <Input placeholder="you@example.com" />
+                  </TextField>
                   <div className="form-actions">
                     <span role="status" aria-live="polite" data-error={Boolean(error)}>
                       {error || (saved ? 'Changes saved' : '')}
@@ -167,27 +323,27 @@ function ProfilePage() {
                 </div>
               </Card.Header>
               <Card.Content>
-                <div className="theme-options" role="group" aria-label="Color theme">
+                <RadioGroup
+                  value={theme}
+                  onChange={(value) => setTheme(value as ThemePreference)}
+                  aria-label="Color theme"
+                  className="theme-options"
+                >
                   {THEMES.map((option) => (
-                    <Button
-                      key={option.id}
-                      variant="ghost"
-                      className="theme-option"
-                      data-selected={theme === option.id}
-                      aria-pressed={theme === option.id}
-                      onPress={() => setTheme(option.id)}
-                    >
-                      <span
-                        className={`theme-preview theme-preview-${option.id}`}
-                        aria-hidden="true"
-                      />
-                      <span>
-                        <strong>{option.label}</strong>
-                        <small>{option.description}</small>
-                      </span>
-                    </Button>
+                    <Radio key={option.id} value={option.id} className="theme-option">
+                      <Radio.Content className="theme-option-content">
+                        <span
+                          className={`theme-preview theme-preview-${option.id}`}
+                          aria-hidden="true"
+                        />
+                        <span className="theme-option-copy">
+                          <strong>{option.label}</strong>
+                          <small>{option.description}</small>
+                        </span>
+                      </Radio.Content>
+                    </Radio>
                   ))}
-                </div>
+                </RadioGroup>
               </Card.Content>
             </Card>
 
