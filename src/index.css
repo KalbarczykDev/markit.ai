@@ -1469,10 +1469,6 @@ body {
   height: 2.25rem;
 }
 
-:root[data-theme='dark'] .brand-mark img {
-  filter: invert(1);
-}
-
 .account-actions {
   display: flex;
   align-items: center;
