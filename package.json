@@ -13,7 +13,8 @@
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
     "verify": "bun run fmt:check && bun run lint:type-aware && bun run build",
-    "deploy": "bun run verify && wrangler deploy -c dist/server/wrangler.json"
+    "deploy": "bun run verify && wrangler deploy -c dist/server/wrangler.json",
+    "deploy:presentation": "wrangler deploy -c presentation/wrangler.toml"
   },
   "dependencies": {
     "@gravity-ui/icons": "^2.20.0",

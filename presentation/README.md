@@ -29,7 +29,7 @@ set +a
 bunx wrangler deploy --config presentation/wrangler.toml
 ```
 
-The worker name is `markit-ai-presentation`.
+The worker name is `markit-ai-presentation`. Pushes to `main` also deploy it automatically through `.github/workflows/deploy.yml`.
 
 ## Files
 
