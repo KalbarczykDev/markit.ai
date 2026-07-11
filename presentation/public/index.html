@@ -6,126 +6,120 @@
     <meta name="theme-color" content="#0d0e12" />
     <meta
       name="description"
-      content="Markit.ai — a voice-first product research assistant. Project presentation."
+      content="Markit.ai: a voice-first product research assistant. Project presentation."
     />
-    <title>Markit.ai — Project Presentation</title>
+    <title>Markit.ai | Project Presentation</title>
     <link rel="stylesheet" href="/styles.css" />
     <script src="/deck.js" defer></script>
   </head>
   <body>
     <div class="deck-shell">
-      <header class="deck-header">
+      <div class="deck-toolbar" aria-label="Presentation controls">
         <a class="wordmark" href="#1" aria-label="Markit.ai, first slide">
-          <span class="wordmark-mark" aria-hidden="true"></span>
+          <img class="wordmark-mark" src="/logo.svg" alt="" />
           <span>markit.ai</span>
         </a>
-        <div class="header-actions">
-          <span class="deck-label">Project story · July 2026</span>
-          <button class="icon-button" id="fullscreen" type="button" aria-label="Enter fullscreen">
-            <svg class="expand-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
-            </svg>
-            <svg class="collapse-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
-            </svg>
-          </button>
-        </div>
-      </header>
+        <button class="icon-button" id="fullscreen" type="button" aria-label="Enter fullscreen">
+          <svg class="expand-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+          </svg>
+          <svg class="collapse-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+          </svg>
+        </button>
+      </div>
 
       <main class="slides" id="slides">
-        <section
-          class="slide slide-cover"
-          aria-labelledby="slide-1-title"
-          data-chapter="Introduction"
-        >
+        <section class="slide slide-cover" aria-labelledby="slide-1-title" data-chapter="Meet Jan">
           <div class="cover-copy reveal">
-            <p class="eyebrow">The problem Markit is solving</p>
-            <h1 id="slide-1-title">Buying is easy.<br /><span>Choosing isn’t.</span></h1>
+            <p class="eyebrow">Meet Jan</p>
+            <h1 id="slide-1-title">Good coffee.<br /><span>Fair price.</span></h1>
             <p class="lede">
-              Product discovery has become a maze of options, claims, reviews, and tabs—while the
-              confidence to choose keeps getting harder to find.
+              Jan wants a bag of specialty coffee for under €25. He has limited vision, so dense
+              product grids and tiny filters turn a simple purchase into a chore.
             </p>
           </div>
-          <div class="hero-visual reveal reveal-late" aria-hidden="true">
-            <div class="signal signal-one"></div>
-            <div class="signal signal-two"></div>
-            <div class="signal signal-three"></div>
-            <div class="orb orb-large"><span></span></div>
-            <p class="visual-caption">One interface.<br />A world of products.</p>
+          <div class="hero-visual reveal reveal-late">
+            <div class="coffee-beans" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <img class="jan-portrait" src="/jan-cutout.png" alt="Jan using voice search" />
           </div>
           <div class="cover-foot reveal reveal-later">
-            <span>Too many options</span>
+            <span>One clear need</span>
             <span class="hairline"></span>
-            <span>Too little clarity</span>
+            <span>Too much friction</span>
           </div>
         </section>
 
-        <section
-          class="slide"
-          aria-labelledby="slide-2-title"
-          data-chapter="The opportunity"
-          hidden
-        >
+        <section class="slide" aria-labelledby="slide-2-title" data-chapter="The problem" hidden>
           <div class="slide-heading reveal">
-            <p class="eyebrow">01 · The opportunity</p>
-            <h2 id="slide-2-title">Shopping has more data.<br /><span>Not more clarity.</span></h2>
+            <p class="eyebrow">01 · The problem</p>
+            <h2 id="slide-2-title">A simple purchase<br /><span>turns into work.</span></h2>
           </div>
           <div class="tension-grid reveal reveal-late">
             <article class="tension-card muted-card">
-              <p class="card-index">Today</p>
-              <h3>The research maze</h3>
+              <p class="card-index">What Jan faces</p>
+              <h3>A screen built for scanning</h3>
               <ul class="friction-list">
-                <li><span>01</span>Fragmented retailer tabs</li>
-                <li><span>02</span>Conflicting prices and claims</li>
-                <li><span>03</span>Filters that miss real intent</li>
+                <li><span>01</span>Dense product grids</li>
+                <li><span>02</span>Small controls and long filters</li>
+                <li><span>03</span>Reviews scattered across sites</li>
               </ul>
             </article>
             <div class="turn-arrow" aria-hidden="true">
               <svg viewBox="0 0 64 32"><path d="M2 16h56M45 3l13 13-13 13" /></svg>
             </div>
             <article class="tension-card accent-card">
-              <p class="card-index">The gap</p>
-              <h3>Information is not a decision</h3>
+              <p class="card-index">The result</p>
+              <h3>The price is hidden inside the process</h3>
               <p>
-                Shoppers are given more content to process, but very little help understanding which
-                tradeoffs actually matter for their situation.
+                Jan can afford the coffee. What costs him is the time and effort required to find
+                it.
               </p>
             </article>
           </div>
           <p class="bottom-note reveal reveal-later">
-            The interface gets quieter. The decision gets clearer.
+            Accessibility should not depend on how well someone can scan a screen.
           </p>
         </section>
 
         <section
           class="slide slide-product"
           aria-labelledby="slide-3-title"
-          data-chapter="Intent"
+          data-chapter="The request"
           hidden
         >
           <div class="product-copy reveal">
-            <p class="eyebrow">02 · Intent gets flattened</p>
-            <h2 id="slide-3-title">People know what they mean.<br /><span>Filters don’t.</span></h2>
+            <p class="eyebrow">02 · Jan starts with his voice</p>
+            <h2 id="slide-3-title">He already knows<br /><span>what he wants.</span></h2>
             <p class="lede">
-              A real shopping need mixes budget, context, preferences, anxieties, and compromises.
-              Traditional search turns all of that into disconnected checkboxes.
+              &quot;Find me a smooth specialty coffee under €25. Whole beans, not too acidic, and
+              from a seller I can trust.&quot;
             </p>
             <div class="state-row" aria-label="What shapes a shopping decision">
-              <span>Needs</span><i></i><span>Context</span><i></i><span>Tradeoffs</span>
+              <span>Under €25</span><i></i><span>Whole bean</span><i></i><span>Low acidity</span>
             </div>
           </div>
           <div class="orb-stage reveal reveal-late" aria-hidden="true">
             <div class="orb-echo echo-one"></div>
             <div class="orb-echo echo-two"></div>
             <div class="orb orb-xlarge"><span></span></div>
-            <div class="status-pill"><b></b>Your real intent</div>
+            <div class="status-pill"><b></b>Listening to Jan</div>
           </div>
         </section>
 
-        <section class="slide" aria-labelledby="slide-4-title" data-chapter="Friction" hidden>
+        <section
+          class="slide"
+          aria-labelledby="slide-4-title"
+          data-chapter="The conversation"
+          hidden
+        >
           <div class="slide-heading compact-heading reveal">
-            <p class="eyebrow">03 · The research loop</p>
-            <h2 id="slide-4-title">Every answer creates<br /><span>three more questions.</span></h2>
+            <p class="eyebrow">03 · Markit gets to work</p>
+            <h2 id="slide-4-title">One useful question.<br /><span>Then it searches.</span></h2>
           </div>
           <ol class="journey reveal reveal-late">
             <li>
@@ -133,56 +127,54 @@
               <div class="journey-icon voice-lines" aria-hidden="true">
                 <i></i><i></i><i></i><i></i><i></i>
               </div>
-              <h3>Search</h3>
-              <p>Start with a need, then translate it into keywords a store might understand.</p>
+              <h3>Listen</h3>
+              <p>Markit picks up the budget, format, taste, and seller requirement.</p>
             </li>
             <li>
               <span class="journey-number">02</span>
               <div class="journey-icon search-glyph" aria-hidden="true"></div>
-              <h3>Open</h3>
-              <p>Scan retailer pages, editorial lists, reviews, and discussions in parallel.</p>
+              <h3>Clarify</h3>
+              <p>It asks Jan whether he prefers a light or medium roast.</p>
             </li>
             <li>
               <span class="journey-number">03</span>
               <div class="journey-icon compare-glyph" aria-hidden="true"><i></i><i></i><i></i></div>
-              <h3>Compare</h3>
-              <p>
-                Reconcile different names, missing details, stale prices, and conflicting claims.
-              </p>
+              <h3>Search</h3>
+              <p>It looks for current offers that stay within his €25 limit.</p>
             </li>
             <li>
               <span class="journey-number">04</span>
               <div class="journey-icon response-glyph" aria-hidden="true"></div>
-              <h3>Repeat</h3>
-              <p>Discover a new tradeoff and begin the same fragmented process all over again.</p>
+              <h3>Answer</h3>
+              <p>Jan hears a short list and why each coffee may suit him.</p>
             </li>
           </ol>
           <p class="bottom-note reveal reveal-later">
-            The burden of synthesis sits with the shopper—not the shopping experience.
+            Jan can do the whole search without reaching for a keyboard.
           </p>
         </section>
 
         <section
           class="slide slide-dark"
           aria-labelledby="slide-5-title"
-          data-chapter="Fragmentation"
+          data-chapter="Live search"
           hidden
         >
           <div class="slide-heading compact-heading reveal">
-            <p class="eyebrow">04 · The answer is scattered</p>
-            <h2 id="slide-5-title">No single source tells<br /><span>the whole story.</span></h2>
+            <p class="eyebrow">04 · From voice to the market</p>
+            <h2 id="slide-5-title">One spoken request<br /><span>becomes a live search.</span></h2>
           </div>
           <div class="architecture reveal reveal-late">
             <div class="arch-node client-node">
-              <span class="node-label">Retailer pages</span>
-              <strong>Price and availability</strong>
-              <small>Optimized to convert</small>
+              <span class="node-label">Jan's voice</span>
+              <strong>Plain-language request</strong>
+              <small>Budget and preferences included</small>
             </div>
-            <div class="arch-connection"><span>More tabs</span><i></i></div>
+            <div class="arch-connection"><span>Understood</span><i></i></div>
             <div class="arch-node worker-node">
-              <span class="node-label">The shopper</span>
-              <strong>One decision to make</strong>
-              <small>Too many sources to reconcile</small>
+              <span class="node-label">Markit.ai</span>
+              <strong>One structured search</strong>
+              <small>Jan's hard budget stays enforced</small>
             </div>
             <div class="arch-split">
               <div class="split-line split-top"></div>
@@ -190,51 +182,54 @@
             </div>
             <div class="arch-destinations">
               <div class="arch-node model-node">
-                <span class="node-label">Reviews</span>
-                <strong>Lived experience</strong>
-                <small>Subjective and inconsistent</small>
+                <span class="node-label">Live listings</span>
+                <strong>Price and availability</strong>
+                <small>Retrieved for this request</small>
               </div>
               <div class="arch-node data-node">
-                <span class="node-label">Guides and forums</span>
-                <strong>Context and edge cases</strong>
-                <small>Useful, but difficult to verify</small>
+                <span class="node-label">Product evidence</span>
+                <strong>Offer and seller details</strong>
+                <small>Kept with each result</small>
               </div>
             </div>
           </div>
-          <div class="tech-strip reveal reveal-later" aria-label="Fragmented shopping information">
-            <span>Facts</span><span>Opinions</span><span>Tradeoffs</span><span>Availability</span>
+          <div class="tech-strip reveal reveal-later" aria-label="Voice product search flow">
+            <span>Voice request</span><span>Hard budget</span><span>Live results</span
+            ><span>Spoken reply</span>
           </div>
         </section>
 
-        <section class="slide" aria-labelledby="slide-6-title" data-chapter="Trust" hidden>
+        <section class="slide" aria-labelledby="slide-6-title" data-chapter="Grounding" hidden>
           <div class="trust-layout">
             <div class="trust-copy reveal">
-              <p class="eyebrow">05 · The confidence gap</p>
-              <h2 id="slide-6-title">A confident answer<br /><span>can still be wrong.</span></h2>
+              <p class="eyebrow">05 · The budget is a rule</p>
+              <h2 id="slide-6-title">Under €25 means<br /><span>under €25.</span></h2>
               <p class="lede">
-                Prices move. Stock disappears. Product details change. Advice becomes dangerous when
-                certainty travels faster than evidence.
+                Markit only shows coffee with a current, matching price in Jan's currency. Unknown
+                prices and near-budget substitutes stay out of the results.
               </p>
             </div>
             <blockquote class="principle-card reveal reveal-late">
-              <span class="quote-mark">“</span>
+              <span class="quote-mark">&quot;</span>
               <p>
-                The moment one important fact is false, every recommendation around it becomes
-                harder to trust.
+                If no verified offer fits, Markit says so instead of quietly moving the goalposts.
               </p>
-              <footer>The trust problem</footer>
+              <footer>A hard constraint</footer>
             </blockquote>
           </div>
           <div class="trust-rules reveal reveal-later">
             <div>
-              <b>01</b><span><strong>Freshness</strong> yesterday’s answer may be wrong today</span>
+              <b>01</b><span><strong>Current price</strong> taken from the live search result</span>
             </div>
             <div>
               <b>02</b
-              ><span><strong>Attribution</strong> claims without origin are hard to judge</span>
+              ><span
+                ><strong>Budget check</strong> currency and price must match Jan's request</span
+              >
             </div>
             <div>
-              <b>03</b><span><strong>Uncertainty</strong> missing evidence is often hidden</span>
+              <b>03</b
+              ><span><strong>Clear limits</strong> missing evidence is shown as missing</span>
             </div>
           </div>
         </section>
@@ -242,120 +237,105 @@
         <section
           class="slide slide-engineering"
           aria-labelledby="slide-7-title"
-          data-chapter="Overload"
+          data-chapter="Independent checks"
           hidden
         >
           <div class="slide-heading compact-heading reveal">
-            <p class="eyebrow">06 · Comparison overload</p>
-            <h2 id="slide-7-title">
-              More options do not create<br /><span>a better decision.</span>
-            </h2>
+            <p class="eyebrow">06 · Every listing gets checked</p>
+            <h2 id="slide-7-title">One product.<br /><span>One independent audit.</span></h2>
           </div>
           <div class="engineering-grid reveal reveal-late">
             <article>
               <div class="feature-symbol interrupt-symbol" aria-hidden="true"><i></i><i></i></div>
-              <h3>Choice paralysis</h3>
-              <p>
-                Endless near-identical options increase hesitation without increasing understanding.
-              </p>
+              <h3>Price check</h3>
+              <p>Does the listing support the price and offer shown on the card?</p>
             </article>
             <article>
               <div class="feature-symbol queue-symbol" aria-hidden="true">
                 <i></i><i></i><i></i>
               </div>
-              <h3>False equivalence</h3>
-              <p>
-                Spec tables make every feature look equally important, even when only a few shape
-                the outcome.
-              </p>
+              <h3>Offer check</h3>
+              <p>Do the product details support the claims Markit is presenting?</p>
             </article>
             <article>
               <div class="feature-symbol vad-symbol" aria-hidden="true">
                 <i></i><i></i><i></i><i></i>
               </div>
-              <h3>Hidden tradeoffs</h3>
-              <p>
-                The cheapest, highest-rated, or most popular option can still be wrong for a
-                person’s priorities.
-              </p>
+              <h3>Seller evidence</h3>
+              <p>How much useful seller information is present in this listing?</p>
             </article>
           </div>
           <div class="engineering-note reveal reveal-later">
-            <span>The real job</span>
-            <p>Reduce the decision to the differences that genuinely matter.</p>
+            <span>While Jan listens</span>
+            <p>Checks stream onto each card without holding up the voice reply.</p>
           </div>
         </section>
 
-        <section class="slide" aria-labelledby="slide-8-title" data-chapter="Context" hidden>
+        <section class="slide" aria-labelledby="slide-8-title" data-chapter="The shortlist" hidden>
           <div class="slide-heading compact-heading reveal">
-            <p class="eyebrow">07 · Generic recommendations</p>
-            <h2 id="slide-8-title">The right product depends<br /><span>on the person.</span></h2>
+            <p class="eyebrow">07 · Results built around Jan</p>
+            <h2 id="slide-8-title">
+              A shortlist he can hear.<br /><span>Evidence he can inspect.</span>
+            </h2>
           </div>
           <div class="progress-board reveal reveal-late">
             <div class="progress-column shipped">
-              <p class="column-label"><i></i>What listings know</p>
+              <p class="column-label"><i></i>What Jan asked for</p>
               <ul>
-                <li>Category and price</li>
-                <li>Ratings and review count</li>
-                <li>Features and specifications</li>
-                <li>Popularity and promotion</li>
+                <li>Maximum price of €25</li>
+                <li>Whole coffee beans</li>
+                <li>Smooth, low-acidity taste</li>
+                <li>Useful seller evidence</li>
               </ul>
             </div>
             <div class="progress-column learning">
-              <p class="column-label"><i></i>What people actually mean</p>
+              <p class="column-label"><i></i>What Markit returns</p>
               <ul>
-                <li>“It has to fit my small apartment.”</li>
-                <li>“I care more about comfort than power.”</li>
-                <li>“This is a gift and I cannot get it wrong.”</li>
-                <li>“I will pay more if it lasts.”</li>
+                <li>A current matching price</li>
+                <li>A short reason for the match</li>
+                <li>Visible audit results</li>
+                <li>A direct link to the offer</li>
               </ul>
             </div>
           </div>
           <p class="bottom-note reveal reveal-later">
-            Relevance begins where filters stop: with situation, priorities, and compromise.
+            The voice answer stays brief. The product cards hold the detail.
           </p>
         </section>
 
         <section
           class="slide slide-roadmap"
           aria-labelledby="slide-9-title"
-          data-chapter="Consequences"
+          data-chapter="The outcome"
           hidden
         >
           <div class="slide-heading compact-heading reveal">
-            <p class="eyebrow">08 · The cost of a hard decision</p>
-            <h2 id="slide-9-title">The damage continues<br /><span>past checkout.</span></h2>
+            <p class="eyebrow">08 · Jan makes the choice</p>
+            <h2 id="slide-9-title">The research fits<br /><span>into one conversation.</span></h2>
           </div>
           <div class="roadmap reveal reveal-late">
             <article>
               <span class="phase">Before</span>
               <div class="roadmap-line"><i></i></div>
-              <h3>Time is lost</h3>
-              <p>
-                Hours disappear into tabs, videos, reviews, comparison sheets, and repeated
-                searches.
-              </p>
+              <h3>Jan speaks naturally</h3>
+              <p>He gives Markit the same details he would tell a knowledgeable shop assistant.</p>
             </article>
             <article>
               <span class="phase">During</span>
               <div class="roadmap-line"><i></i></div>
-              <h3>Confidence erodes</h3>
-              <p>
-                Conflicting information makes every option feel like a risk instead of a choice.
-              </p>
+              <h3>Markit does the research</h3>
+              <p>It searches live offers, enforces the budget, and checks every listing.</p>
             </article>
             <article>
               <span class="phase">After</span>
               <div class="roadmap-line"><i></i></div>
-              <h3>Mistakes get expensive</h3>
-              <p>
-                Returns, wasted money, buyer’s remorse, and products that never fit the real need.
-              </p>
+              <h3>Jan chooses</h3>
+              <p>He hears the shortlist and opens a card only when he wants more detail.</p>
             </article>
           </div>
           <div class="north-star reveal reveal-later">
-            <span>The opportunity</span>
-            <p>Make confidence easier to reach before money changes hands.</p>
+            <span>The outcome</span>
+            <p>Jan gets a better route to the same market.</p>
           </div>
         </section>
 
@@ -370,39 +350,18 @@
           </div>
           <div class="finale-copy reveal reveal-late">
             <p class="eyebrow">Markit.ai</p>
-            <h2 id="slide-10-title">Less searching.<br /><span>Better choosing.</span></h2>
-            <p>A clearer path from a real need to a confident decision.</p>
+            <h2 id="slide-10-title">Good coffee.<br /><span>Less friction.</span></h2>
+            <p>Markit turns a spoken need into a grounded product choice.</p>
           </div>
           <div class="finale-tag reveal reveal-later">
-            <span>Less noise</span><i></i><span>More clarity</span><i></i><span>Better fit</span>
+            <span>Say what you need</span><i></i><span>Choose with confidence</span>
           </div>
         </section>
       </main>
 
-      <footer class="deck-controls">
-        <div class="progress-cluster">
-          <span class="slide-count"
-            ><b id="current-slide">01</b> / <span id="total-slides">10</span></span
-          >
-          <progress
-            id="deck-progress"
-            value="1"
-            max="10"
-            aria-label="Presentation progress"
-          ></progress>
-          <span class="chapter-name" id="chapter-name">Introduction</span>
-        </div>
-        <nav class="nav-buttons" aria-label="Slide navigation">
-          <button id="previous" type="button" aria-label="Previous slide">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
-            <span>Back</span>
-          </button>
-          <button id="next" class="next-button" type="button" aria-label="Next slide">
-            <span>Next</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
-          </button>
-        </nav>
-      </footer>
+      <p class="slide-count" aria-label="Slide count">
+        <b id="current-slide">01</b>/<span id="total-slides">10</span>
+      </p>
       <p class="sr-only" id="slide-announcement" aria-live="polite"></p>
     </div>
   </body>

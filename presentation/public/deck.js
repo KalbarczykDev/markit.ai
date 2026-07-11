@@ -1,11 +1,7 @@
 const slides = Array.from(document.querySelectorAll('.slide'))
-const previousButton = document.querySelector('#previous')
-const nextButton = document.querySelector('#next')
 const fullscreenButton = document.querySelector('#fullscreen')
 const currentLabel = document.querySelector('#current-slide')
 const totalLabel = document.querySelector('#total-slides')
-const progress = document.querySelector('#deck-progress')
-const chapterLabel = document.querySelector('#chapter-name')
 const announcement = document.querySelector('#slide-announcement')
 const deckShell = document.querySelector('.deck-shell')
 
@@ -39,16 +35,10 @@ function renderSlide(nextIndex, options = {}) {
   const activeSlide = slides[currentIndex]
   const title =
     activeSlide.querySelector('h1, h2')?.textContent.trim() || `Slide ${currentIndex + 1}`
-  const chapter = activeSlide.dataset.chapter || ''
 
   currentLabel.textContent = formatSlideNumber(currentIndex + 1)
   totalLabel.textContent = formatSlideNumber(slides.length)
-  progress.max = slides.length
-  progress.value = currentIndex + 1
-  chapterLabel.textContent = chapter
-  previousButton.disabled = currentIndex === 0
-  nextButton.disabled = currentIndex === slides.length - 1
-  document.title = `${title} — Markit.ai`
+  document.title = `${title} | Markit.ai`
 
   const hash = `#${currentIndex + 1}`
   if (window.location.hash !== hash) history.replaceState(null, '', hash)
@@ -63,9 +53,6 @@ function goNext() {
 function goPrevious() {
   if (currentIndex > 0) renderSlide(currentIndex - 1)
 }
-
-previousButton.addEventListener('click', goPrevious)
-nextButton.addEventListener('click', goNext)
 
 window.addEventListener('keydown', (event) => {
   if (event.altKey || event.ctrlKey || event.metaKey) return
