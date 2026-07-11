@@ -1,0 +1,205 @@
+@import 'tailwindcss';
+@import '@heroui/react/styles';
+
+@source './**/*.{ts,tsx}';
+
+:root {
+  color: #fff;
+  background: #050506;
+  font-family: system-ui, sans-serif;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #050506;
+}
+
+button {
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.voice-stage {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 100svh;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(105, 80, 255, 0.08), transparent 34%),
+    radial-gradient(circle at 50% 120%, rgba(0, 204, 255, 0.06), transparent 42%), #050506;
+}
+
+.voice-stage::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: '';
+  opacity: 0.18;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+}
+
+.voice-orb {
+  --level: 0;
+  position: relative;
+  width: clamp(180px, 28vw, 310px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  outline: none;
+  cursor: pointer;
+  background: transparent;
+  filter: saturate(calc(0.88 + var(--level) * 0.5));
+  transform: scale(calc(1 + var(--level) * 0.09));
+  transition:
+    transform 90ms linear,
+    filter 180ms ease;
+}
+
+.voice-orb:focus-visible::after {
+  position: absolute;
+  inset: -14px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: inherit;
+  content: '';
+}
+
+.orb-halo {
+  position: absolute;
+  inset: calc(-16% - var(--level) * 12%);
+  border-radius: 50%;
+  opacity: calc(0.34 + var(--level) * 0.54);
+  background: conic-gradient(from 20deg, #431fff, #00d5ff, #fc3bcb, #ff762e, #431fff);
+  filter: blur(calc(40px + var(--level) * 20px));
+  animation: halo-breathe 4s ease-in-out infinite;
+}
+
+.orb-shell {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.82), transparent 10%),
+    radial-gradient(circle at 28% 32%, #916bff 0, transparent 34%),
+    radial-gradient(circle at 75% 68%, #ff4a98 0, transparent 39%),
+    radial-gradient(circle at 68% 28%, #00c7ff 0, transparent 42%),
+    radial-gradient(circle at 34% 78%, #ff8a42 0, transparent 35%), #181537;
+  box-shadow:
+    inset 0 0 42px rgba(255, 255, 255, 0.2),
+    inset 18px 10px 34px rgba(255, 255, 255, 0.18),
+    inset -24px -20px 46px rgba(18, 4, 48, 0.44),
+    0 20px 80px rgba(70, 47, 255, 0.3);
+}
+
+.orb-shell::before,
+.orb-shell::after {
+  position: absolute;
+  inset: -28%;
+  border-radius: 44% 56% 48% 52%;
+  content: '';
+  mix-blend-mode: screen;
+  background: conic-gradient(from 90deg, transparent, rgba(255, 255, 255, 0.38), transparent 32%);
+  animation: liquid-spin 7s linear infinite;
+}
+
+.orb-shell::after {
+  inset: -15%;
+  opacity: 0.45;
+  background: conic-gradient(
+    from 230deg,
+    transparent,
+    #46e1ff,
+    transparent 27%,
+    #ff5dd4,
+    transparent 58%
+  );
+  animation-duration: 5s;
+  animation-direction: reverse;
+}
+
+.orb-core {
+  position: absolute;
+  inset: 27%;
+  border-radius: 50%;
+  opacity: calc(0.24 + var(--level) * 0.45);
+  background: rgba(255, 255, 255, 0.9);
+  filter: blur(calc(26px - var(--level) * 10px));
+  transform: scale(calc(0.8 + var(--level) * 0.8));
+  transition: transform 70ms linear;
+}
+
+.orb-wave {
+  position: absolute;
+  inset: calc(10% - var(--level) * 4%);
+  border: calc(1px + var(--level) * 3px) solid rgba(255, 255, 255, 0.38);
+  border-radius: 50%;
+  opacity: calc(0.18 + var(--level) * 0.58);
+  transform: scale(calc(0.9 + var(--level) * 0.12));
+}
+
+.voice-orb[data-state='connecting'] .orb-shell {
+  animation: connecting 1s ease-in-out infinite;
+}
+
+.voice-orb[data-state='listening'] .orb-halo {
+  animation-duration: 2.6s;
+}
+
+.voice-orb[data-state='speaking'] .orb-shell {
+  box-shadow:
+    inset 0 0 50px rgba(255, 255, 255, 0.34),
+    0 0 90px rgba(88, 92, 255, 0.5);
+}
+
+.voice-orb[data-state='error'] {
+  filter: grayscale(0.72) saturate(0.45);
+}
+
+@keyframes liquid-spin {
+  to {
+    transform: rotate(1turn) scale(calc(1 + var(--level) * 0.12));
+  }
+}
+
+@keyframes halo-breathe {
+  50% {
+    opacity: calc(0.52 + var(--level) * 0.48);
+    transform: scale(1.08);
+  }
+}
+
+@keyframes connecting {
+  50% {
+    transform: scale(0.95);
+  }
+}
+
+@media (max-width: 600px) {
+  .voice-orb {
+    width: min(58vw, 240px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-halo,
+  .orb-shell,
+  .orb-shell::before,
+  .orb-shell::after {
+    animation: none !important;
+  }
+}

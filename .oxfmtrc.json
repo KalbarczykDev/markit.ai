@@ -1,0 +1,7 @@
+{
+  "indentWidth": 2,
+  "singleQuote": true,
+  "semi": false,
+  "trailingComma": "all",
+  "sortImports": true
+}
