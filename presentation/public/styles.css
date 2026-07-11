@@ -1471,10 +1471,6 @@
     background: var(--white);
     box-shadow: var(--shadow);
   }
-
-  .demo-copy h3 {
-    margin-bottom: 0;
-  }
 }
 
 @layer responsive {
