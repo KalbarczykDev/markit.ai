@@ -13,17 +13,17 @@ out of scope here.
 
 ## Decisions (all confirmed with the user)
 
-| Decision       | Choice                                                                 |
-| -------------- | ---------------------------------------------------------------------- |
-| Scope          | Full deterministic price-event simulator                                |
-| Interface      | Pure TS module in `src/mock-market/` + thin HTTP wrapper `/api/market/*` |
-| Time model     | Hybrid: wall clock default (1 real minute = 1 sim day), explicit `day` override |
-| Catalog        | Sneakers + 2 more categories (headphones, jackets), ~30 products, 3–6 offers each |
-| Boundary       | Raw offer data only; no landed-cost computation                         |
-| Traps          | Bait listings, fake "was" anchors, FX traps, stock scarcity + coupon churn — all four |
-| Currencies     | EUR (home), GBP, USD, PLN                                               |
-| Determinism    | Pure noise functions of `(SEED, offerId, day)` — no state, no event log |
-| Ground truth   | Public API is scraper-visible only; truth flags in a separate eval export |
+| Decision     | Choice                                                                                |
+| ------------ | ------------------------------------------------------------------------------------- |
+| Scope        | Full deterministic price-event simulator                                              |
+| Interface    | Pure TS module in `src/mock-market/` + thin HTTP wrapper `/api/market/*`              |
+| Time model   | Hybrid: wall clock default (1 real minute = 1 sim day), explicit `day` override       |
+| Catalog      | Sneakers + 2 more categories (headphones, jackets), ~30 products, 3–6 offers each     |
+| Boundary     | Raw offer data only; no landed-cost computation                                       |
+| Traps        | Bait listings, fake "was" anchors, FX traps, stock scarcity + coupon churn — all four |
+| Currencies   | EUR (home), GBP, USD, PLN                                                             |
+| Determinism  | Pure noise functions of `(SEED, offerId, day)` — no state, no event log               |
+| Ground truth | Public API is scraper-visible only; truth flags in a separate eval export             |
 
 No new libraries or frameworks. Noise/hash functions are hand-rolled
 (integer-hash style). Tests run with `bun test`.
@@ -146,7 +146,7 @@ GET /api/market/fx[?day=N]                     → all rates
 2. **Trap invariants** — every configured FX-trap offer lands above its EUR
    competitor when naively converted; bait offers always carry ≥2 suspicious
    signals; fake anchors exceed the true 90-day high.
-3. **Consistency** — `getPriceHistory` at day *d* equals `getQuote(offerId, d)`
+3. **Consistency** — `getPriceHistory` at day _d_ equals `getQuote(offerId, d)`
    sticker; quotes inside promo windows are below base.
 4. **Time** — `currentSimDay` maps EPOCH→0, EPOCH+60s→1; `day` override wins.
 5. **HTTP** — route handlers return expected shapes and status codes.
