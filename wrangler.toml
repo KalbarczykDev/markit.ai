@@ -6,6 +6,14 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 binding = "ASSETS"
 
+[[durable_objects.bindings]]
+name = "ACCOUNT_STORE"
+class_name = "AccountStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["AccountStore"]
+
 [observability]
 enabled = true
 head_sampling_rate = 0.1

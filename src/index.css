@@ -774,10 +774,45 @@ body {
   color: var(--accent);
 }
 
+.brand-mark img {
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+:root[data-theme='dark'] .brand-mark img {
+  filter: invert(1);
+}
+
 .account-actions {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+}
+
+.account-loading {
+  display: grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.signed-out-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.signed-out-actions > button:first-child {
+  color: var(--text-secondary);
+}
+
+.create-account-button,
+.auth-submit {
+  color: #fff !important;
+  background: #6150a4 !important;
+  box-shadow: 0 8px 20px rgba(83, 66, 148, 0.2);
 }
 
 .wallet-pill,
@@ -1129,6 +1164,10 @@ body {
   font-size: 0.7rem;
 }
 
+.form-actions > span[data-error='true'] {
+  color: #b34f58;
+}
+
 .save-profile-button {
   color: #fff !important;
   background: #6150a4 !important;
@@ -1214,6 +1253,130 @@ body {
   font-size: 0.66rem;
 }
 
+/* Authentication */
+.auth-stage {
+  display: grid;
+  width: 100%;
+  min-height: 100svh;
+  place-items: center;
+  overflow-y: auto;
+  padding: 7rem 1.25rem 3rem;
+  background:
+    radial-gradient(circle at 22% 15%, var(--page-glow), transparent 31rem), var(--page-bg);
+}
+
+.auth-loading-stage {
+  color: var(--text-muted);
+}
+
+.auth-shell {
+  width: min(27rem, 100%);
+}
+
+.auth-copy {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.auth-copy h1 {
+  margin: 0.45rem 0 0.7rem;
+  color: var(--text-primary);
+  font-size: clamp(1.9rem, 7vw, 2.65rem);
+  font-weight: 680;
+  letter-spacing: -0.055em;
+  line-height: 1.04;
+}
+
+.auth-copy p {
+  max-width: 25rem;
+  margin: 0 auto;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.auth-card {
+  overflow: hidden;
+  padding: 1.35rem !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 1.45rem !important;
+  color: var(--text-primary) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--overlay-shadow);
+  backdrop-filter: blur(22px);
+}
+
+.auth-card > div:first-child {
+  padding: 0 !important;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 0.42rem;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 2.85rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.82rem;
+  outline: none;
+  color: var(--text-primary);
+  background: var(--surface-solid);
+  font-size: 0.78rem;
+}
+
+.auth-form input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.auth-error {
+  min-height: 1rem;
+  margin-top: -0.3rem;
+  color: #b34f58;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.auth-submit {
+  min-height: 2.9rem !important;
+}
+
+.auth-footer {
+  display: flex !important;
+  margin-top: 1.2rem;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.2rem !important;
+  padding: 1rem 0 0 !important;
+  border-top: 1px solid var(--line);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.auth-footer button {
+  color: var(--accent) !important;
+}
+
+.auth-security-note {
+  max-width: 22rem;
+  margin: 1.2rem auto 0;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 /* Keep commerce surfaces coherent when appearance is dark. */
 :root[data-theme='dark'] .agent-status,
 :root[data-theme='dark'] .product-panel-heading small,
@@ -1252,6 +1415,11 @@ body {
     font-size: 0.9rem;
   }
 
+  .brand-mark img {
+    width: 2rem;
+    height: 2rem;
+  }
+
   .wallet-pill {
     min-height: 2.5rem;
     padding: 0 0.7rem;
@@ -1274,6 +1442,15 @@ body {
 
   .profile-stage {
     padding: 5.2rem 1rem 3rem;
+  }
+
+  .auth-stage {
+    place-items: start center;
+    padding: 6.2rem 1rem 2rem;
+  }
+
+  .signed-out-actions .create-account-button {
+    padding-inline: 0.7rem;
   }
 
   .profile-intro {

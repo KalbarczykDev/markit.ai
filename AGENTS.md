@@ -45,6 +45,8 @@ Use `bun oxlint --type-aware` as the source of truth for linting and type analys
 
 - Use Bun, not npm, pnpm, or yarn.
 - Use strict TypeScript. Avoid `any` and unsafe casts.
+- Keep every source script (`.ts`, `.tsx`, `.js`, and `.jsx`) at or below 500 lines. Split larger implementations by feature responsibility into focused modules; do not evade the limit by minifying or compressing formatting.
+- Organize code by clear ownership: routes compose pages, components own presentation, and server/domain modules own validation, persistence, and external integrations.
 - Use file-based TanStack routes in `src/routes`.
 - Prefer HeroUI v3 components over recreating accessible controls. Import from `@heroui/react`; do not use HeroUI v2 packages or patterns.
 - HeroUI interactions use `onPress`, not `onClick`.

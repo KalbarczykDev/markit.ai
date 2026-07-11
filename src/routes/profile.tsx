@@ -23,26 +23,40 @@ function initials(name: string) {
 
 function ProfilePage() {
   const navigate = useNavigate()
-  const { profile, theme, setTheme, updateProfile } = useAccount()
-  const [name, setName] = useState(profile.name)
-  const [email, setEmail] = useState(profile.email)
-  const [offersEnabled, setOffersEnabled] = useState(true)
+  const { profile, isLoading, theme, setTheme, updateProfile } = useAccount()
+  const [name, setName] = useState(profile?.name ?? '')
+  const [email, setEmail] = useState(profile?.email ?? '')
+  const [offersEnabled, setOffersEnabled] = useState(profile?.offersEnabled ?? true)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setName(profile.name)
-    setEmail(profile.email)
-  }, [profile.email, profile.name])
+    if (!isLoading && !profile) void navigate({ to: '/login', replace: true })
+    if (profile) {
+      setName(profile.name)
+      setEmail(profile.email)
+      setOffersEnabled(profile.offersEnabled)
+    }
+  }, [isLoading, navigate, profile])
 
   const wallet = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-    profile.walletCents / 100,
+    (profile?.walletCents ?? 0) / 100,
   )
 
-  const saveProfile = (event: FormEvent<HTMLFormElement>) => {
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    updateProfile({ name: name.trim() || 'Markit shopper', email: email.trim() })
-    setSaved(true)
-    window.setTimeout(() => setSaved(false), 2200)
+    setError('')
+    try {
+      await updateProfile({ name: name.trim(), email: email.trim() })
+      setSaved(true)
+      window.setTimeout(() => setSaved(false), 2200)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to save your profile.')
+    }
+  }
+
+  if (isLoading || !profile) {
+    return <main className="profile-stage" aria-label="Loading profile" />
   }
 
   return (
@@ -64,7 +78,7 @@ function ProfilePage() {
             <p>Manage the details and settings Markit uses for your shopping experience.</p>
           </div>
           <Chip color="success" variant="soft" size="sm">
-            Local account
+            Active account
           </Chip>
         </section>
 
@@ -97,7 +111,7 @@ function ProfilePage() {
               </Card.Description>
               <Card.Footer>
                 <span>Wallet ID</span>
-                <strong>•••• 4821</strong>
+                <strong>•••• {profile.id.slice(-4).toUpperCase()}</strong>
               </Card.Footer>
             </Card>
           </aside>
@@ -134,8 +148,8 @@ function ProfilePage() {
                     />
                   </label>
                   <div className="form-actions">
-                    <span role="status" aria-live="polite">
-                      {saved ? 'Changes saved' : ''}
+                    <span role="status" aria-live="polite" data-error={Boolean(error)}>
+                      {error || (saved ? 'Changes saved' : '')}
                     </span>
                     <Button type="submit" className="save-profile-button">
                       Save profile
@@ -185,7 +199,15 @@ function ProfilePage() {
                 </div>
               </Card.Header>
               <Card.Content>
-                <Switch isSelected={offersEnabled} onChange={setOffersEnabled}>
+                <Switch
+                  isSelected={offersEnabled}
+                  onChange={(selected) => {
+                    setOffersEnabled(selected)
+                    void updateProfile({ offersEnabled: selected }).catch(() => {
+                      setOffersEnabled(!selected)
+                    })
+                  }}
+                >
                   <Switch.Content>
                     <strong>Price-drop alerts</strong>
                     <span>Notify me when a saved product drops in price.</span>
