@@ -36,10 +36,10 @@
     --paper: #f2f0eb;
     --paper-deep: #e8e5df;
     --white: #fff;
-    --violet: #725cff;
-    --violet-soft: #d9d1ff;
-    --cyan: #84e5f4;
-    --pink: #f2a6c7;
+    --violet: #6d830a;
+    --violet-soft: #e6f3bb;
+    --cyan: #cfe6a8;
+    --pink: #dfddd4;
     --lime: #d9f47b;
     --dark: #0d0e12;
     --dark-soft: #171820;
@@ -63,8 +63,8 @@
   body {
     overflow: hidden;
     background:
-      radial-gradient(circle at 15% 0%, rgba(217, 209, 255, 0.46), transparent 34rem),
-      radial-gradient(circle at 100% 100%, rgba(132, 229, 244, 0.28), transparent 38rem), #e7e4de;
+      radial-gradient(circle at 15% 0%, rgba(230, 243, 187, 0.46), transparent 34rem),
+      radial-gradient(circle at 100% 100%, rgba(203, 228, 150, 0.28), transparent 38rem), #e7e4de;
   }
 
   button,
@@ -269,7 +269,8 @@
 
   h1 span,
   h2 span {
-    color: var(--violet);
+    color: var(--ink);
+    background: linear-gradient(transparent 56%, var(--lime) 56% 94%, transparent 94%);
   }
 
   h3 {
@@ -322,14 +323,14 @@
     border-radius: 50%;
     background:
       radial-gradient(circle at 33% 26%, rgba(255, 255, 255, 0.96) 0 3%, transparent 25%),
-      radial-gradient(circle at 25% 40%, #a99af7, transparent 44%),
-      radial-gradient(circle at 76% 28%, #79def0, transparent 46%),
-      radial-gradient(circle at 66% 84%, #f2a6c7, transparent 46%), #d4cdfb;
+      radial-gradient(circle at 25% 40%, #c4e07a, transparent 44%),
+      radial-gradient(circle at 76% 28%, #9fe3b8, transparent 46%),
+      radial-gradient(circle at 66% 84%, #dfddd4, transparent 46%), #e3f2c0;
     box-shadow:
       inset 12px 14px 34px rgba(255, 255, 255, 0.62),
-      inset -18px -20px 42px rgba(70, 53, 155, 0.15),
-      0 34px 82px rgba(86, 67, 178, 0.22),
-      0 5px 15px rgba(86, 67, 178, 0.1);
+      inset -18px -20px 42px rgba(92, 112, 28, 0.15),
+      0 34px 82px rgba(104, 122, 36, 0.22),
+      0 5px 15px rgba(104, 122, 36, 0.1);
   }
 
   .orb::before {
@@ -341,7 +342,7 @@
       transparent 0 16%,
       rgba(255, 255, 255, 0.72) 28%,
       transparent 40% 68%,
-      rgba(134, 239, 255, 0.58) 80%,
+      rgba(214, 240, 172, 0.58) 80%,
       transparent 92%
     );
     content: '';
@@ -441,10 +442,10 @@
     right: calc(clamp(5.5rem, 7vw, 9rem) + min(18vw, 24rem) - min(38vw, 42rem));
     border-radius: 46% 54% 50% 50%;
     background:
-      radial-gradient(circle at 58% 38%, rgba(114, 92, 255, 0.38), transparent 36%),
-      radial-gradient(circle at 42% 66%, rgba(132, 229, 244, 0.24), transparent 48%),
-      radial-gradient(circle at 70% 64%, rgba(242, 166, 199, 0.2), transparent 42%),
-      radial-gradient(circle, rgba(217, 209, 255, 0.82), transparent 74%);
+      radial-gradient(circle at 58% 38%, rgba(148, 178, 32, 0.38), transparent 36%),
+      radial-gradient(circle at 42% 66%, rgba(203, 228, 150, 0.24), transparent 48%),
+      radial-gradient(circle at 70% 64%, rgba(226, 224, 214, 0.2), transparent 42%),
+      radial-gradient(circle, rgba(230, 243, 187, 0.82), transparent 74%);
     content: '';
     filter: blur(22px);
     transform: translateY(-50%);
@@ -530,7 +531,7 @@
 
   .signal {
     position: absolute;
-    border: 1px solid rgba(114, 92, 255, 0.15);
+    border: 1px solid rgba(148, 178, 32, 0.15);
     border-radius: 50%;
   }
 
@@ -718,7 +719,7 @@
 
   .orb-echo {
     position: absolute;
-    border: 1px solid rgba(114, 92, 255, 0.14);
+    border: 1px solid rgba(148, 178, 32, 0.14);
     border-radius: 50%;
   }
 
@@ -756,7 +757,7 @@
     height: 0.38rem;
     border-radius: 50%;
     background: currentColor;
-    box-shadow: 0 0 0 5px rgba(114, 92, 255, 0.1);
+    box-shadow: 0 0 0 5px rgba(148, 178, 32, 0.1);
   }
 
   .journey {
@@ -896,7 +897,7 @@
   }
 
   .slide-dark {
-    background: radial-gradient(circle at 80% 14%, rgba(114, 92, 255, 0.14), transparent 32rem);
+    background: radial-gradient(circle at 80% 14%, rgba(148, 178, 32, 0.14), transparent 32rem);
   }
 
   .architecture {
@@ -918,8 +919,8 @@
   }
 
   .worker-node {
-    border-color: rgba(114, 92, 255, 0.35);
-    background: rgba(114, 92, 255, 0.08);
+    border-color: rgba(148, 178, 32, 0.35);
+    background: rgba(148, 178, 32, 0.08);
   }
 
   .arch-node .node-label {
@@ -1351,7 +1352,7 @@
     grid-template-rows: 1fr auto;
     align-items: start;
     column-gap: 7vw;
-    background: radial-gradient(circle at 20% 50%, rgba(114, 92, 255, 0.14), transparent 29rem);
+    background: radial-gradient(circle at 20% 50%, rgba(148, 178, 32, 0.14), transparent 29rem);
   }
 
   .finale-orb {
