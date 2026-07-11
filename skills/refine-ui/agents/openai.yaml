@@ -1,0 +1,4 @@
+interface:
+  display_name: "Refine UI"
+  short_description: "Design and review polished product interfaces"
+  default_prompt: "Use $refine-ui to design or review this interface with strong hierarchy, spacing, typography, color, and depth."

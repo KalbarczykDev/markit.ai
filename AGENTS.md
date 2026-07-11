@@ -60,3 +60,9 @@ The Worker is named `markit-ai` and configured in `wrangler.toml`. `bun run buil
 For manual deployment, provide `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` through the process environment. Never write credentials into tracked files.
 
 When a task includes deployment and `bun run verify` is green, deploy, verify the live URL, then commit and push only the files changed for the task.
+
+## UI work
+
+For any task that designs, implements, or reviews frontend UI, read and follow [`skills/refine-ui/SKILL.md`](skills/refine-ui/SKILL.md) before making changes. Use its review checklist before handoff.
+
+Keep the licensed Refactoring UI source files in `/Users/oskalbarczyk/Downloads/Refactoring_UI`; never copy or commit the full source materials into this repository.
