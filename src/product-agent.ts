@@ -1,6 +1,7 @@
 import { experimental_getRealtimeToolDefinitions, tool } from 'ai'
 import { z } from 'zod'
 
+import { resolveCountryMarket } from './product-markets'
 import type { ProductCardData } from './product-types'
 
 export const PRODUCT_SYSTEM_PROMPT = `# Role and objective
@@ -55,6 +56,7 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 # Checkout consent
 - Checkout is for the configured Markit Stripe offer. Never claim it purchases, reserves, or pays the third-party retailer listing found by search_products.
 - Once the shopper has made a final decision, ask one direct confirmation in their current language: whether they want you to open secure checkout now.
+- After the shopper chooses a final option, the spoken response MUST end with that single checkout confirmation question, with nothing after it. Translate the question rather than defaulting to English.
 - Asking is mandatory before checkout, but do not pressure the shopper or repeat the question after a refusal.
 - Call begin_checkout only after the shopper gives an explicit affirmative answer to that checkout question in the immediately relevant turn.
 - Never treat general enthusiasm, selecting a product, saying it looks good, or asking about price as payment consent.
@@ -107,76 +109,6 @@ export const productSearchInputSchema = z.object({
     .optional()
     .describe('ISO 4217 currency code for minPrice and maxPrice, such as USD, EUR, GBP, or PLN'),
 })
-
-const COUNTRY_MARKETS: Record<string, { country: string; currency: string }> = {
-  AT: { country: 'Austria', currency: 'EUR' },
-  AU: { country: 'Australia', currency: 'AUD' },
-  BE: { country: 'Belgium', currency: 'EUR' },
-  CA: { country: 'Canada', currency: 'CAD' },
-  CH: { country: 'Switzerland', currency: 'CHF' },
-  CZ: { country: 'Czechia', currency: 'CZK' },
-  DE: { country: 'Germany', currency: 'EUR' },
-  DK: { country: 'Denmark', currency: 'DKK' },
-  ES: { country: 'Spain', currency: 'EUR' },
-  FI: { country: 'Finland', currency: 'EUR' },
-  FR: { country: 'France', currency: 'EUR' },
-  GB: { country: 'United Kingdom', currency: 'GBP' },
-  HU: { country: 'Hungary', currency: 'HUF' },
-  IE: { country: 'Ireland', currency: 'EUR' },
-  IT: { country: 'Italy', currency: 'EUR' },
-  JP: { country: 'Japan', currency: 'JPY' },
-  NL: { country: 'Netherlands', currency: 'EUR' },
-  NO: { country: 'Norway', currency: 'NOK' },
-  NZ: { country: 'New Zealand', currency: 'NZD' },
-  PL: { country: 'Poland', currency: 'PLN' },
-  PT: { country: 'Portugal', currency: 'EUR' },
-  RO: { country: 'Romania', currency: 'RON' },
-  SE: { country: 'Sweden', currency: 'SEK' },
-  SK: { country: 'Slovakia', currency: 'EUR' },
-  US: { country: 'United States', currency: 'USD' },
-}
-
-const COUNTRY_ALIASES: Record<string, string> = {
-  austria: 'AT',
-  australia: 'AU',
-  belgium: 'BE',
-  canada: 'CA',
-  switzerland: 'CH',
-  czechia: 'CZ',
-  'czech republic': 'CZ',
-  germany: 'DE',
-  denmark: 'DK',
-  spain: 'ES',
-  finland: 'FI',
-  france: 'FR',
-  'united kingdom': 'GB',
-  uk: 'GB',
-  hungary: 'HU',
-  ireland: 'IE',
-  italy: 'IT',
-  japan: 'JP',
-  netherlands: 'NL',
-  norway: 'NO',
-  'new zealand': 'NZ',
-  poland: 'PL',
-  polska: 'PL',
-  portugal: 'PT',
-  romania: 'RO',
-  sweden: 'SE',
-  slovakia: 'SK',
-  'united states': 'US',
-  usa: 'US',
-}
-
-export function resolveCountryMarket(country: string | undefined) {
-  if (!country) return undefined
-  const normalized = country.trim()
-  const code =
-    normalized.length === 2
-      ? normalized.toUpperCase()
-      : COUNTRY_ALIASES[normalized.toLocaleLowerCase('en-US')]
-  return code ? COUNTRY_MARKETS[code] : undefined
-}
 
 export function productSystemPromptForCountry(countryCode: string | null): string {
   const market = resolveCountryMarket(countryCode ?? undefined)
@@ -268,7 +200,7 @@ function sourceName(url: string): string {
 }
 
 const PRICE_PATTERN =
-  /(?:[$€£]\s?\d[\d,.]*(?:\.\d{2})?|\d[\d,.]*(?:\.\d{2})?\s?(?:USD|EUR|GBP|PLN))/i
+  /(?:[$€£]\s?\d[\d\s,.]*(?:\.\d{2})?|\d[\d\s,.]*(?:\.\d{2})?\s?(?:USD|EUR|GBP|PLN|AUD|CAD|CHF|CZK|DKK|HUF|JPY|NOK|NZD|RON|SEK|zł))/i
 const DISCOUNT_PATTERN =
   /(?:\b\d{1,2}%\s*off\b|\bsave\s+[$€£]?\s?\d[\d,.]*\b|\bdiscount(?:ed)?\b|\bsale price\b)/i
 const SHIPPING_PATTERN = /\b(?:free\s+)?(?:shipping|delivery)|\bships?\s+(?:for|from|within|in)\b/i
@@ -283,15 +215,24 @@ function safeAssetUrl(value: string | null | undefined): string | undefined {
   }
 }
 
-function parsePrice(display: string): { value: number; currency: string } | undefined {
+function parsePrice(
+  display: string,
+  defaultCurrency?: string,
+): { value: number; currency: string } | undefined {
   const currency = display.includes('$')
-    ? 'USD'
+    ? defaultCurrency && ['USD', 'AUD', 'CAD', 'NZD'].includes(defaultCurrency)
+      ? defaultCurrency
+      : 'USD'
     : display.includes('€')
       ? 'EUR'
       : display.includes('£')
         ? 'GBP'
-        : display.match(/\b(?:USD|EUR|GBP|PLN)\b/i)?.[0].toUpperCase()
-  const raw = display.match(/\d[\d,.]*/)?.[0]
+        : /zł/i.test(display)
+          ? 'PLN'
+          : display
+              .match(/\b(?:USD|EUR|GBP|PLN|AUD|CAD|CHF|CZK|DKK|HUF|JPY|NOK|NZD|RON|SEK)\b/i)?.[0]
+              .toUpperCase()
+  const raw = display.match(/\d[\d\s,.]*/)?.[0].replace(/\s/g, '')
   if (!currency || !raw) return undefined
 
   const lastComma = raw.lastIndexOf(',')
@@ -315,11 +256,12 @@ function parsePrice(display: string): { value: number; currency: string } | unde
 
 function findPrice(
   highlights: string[],
+  defaultCurrency?: string,
 ): { display: string; value: number; currency: string } | undefined {
   for (const highlight of highlights) {
     const display = highlight.match(PRICE_PATTERN)?.[0]?.replace(/\s+/g, ' ').trim()
     if (!display) continue
-    const parsed = parsePrice(display)
+    const parsed = parsePrice(display, defaultCurrency)
     if (parsed) return { display, ...parsed }
   }
   return undefined
@@ -401,28 +343,33 @@ export async function searchProducts(
   products: ProductCardData[]
 }> {
   const parsed = productSearchInputSchema.parse(input)
+  const countryMarket = resolveCountryMarket(parsed.country)
+  const effectiveCurrency = parsed.currency ?? countryMarket?.currency
   const market = parsed.country ? ` in ${parsed.country}` : ''
   const budget = [
     parsed.minPrice !== undefined ? `minimum ${parsed.minPrice}` : '',
     parsed.maxPrice !== undefined ? `maximum ${parsed.maxPrice}` : '',
-    parsed.currency || '',
+    effectiveCurrency || '',
   ]
     .filter(Boolean)
     .join(' ')
-  const searchQuery = `${parsed.query}${market}${budget ? ` hard price range ${budget}` : ''} current price original price discount sale shipping delivery cost availability returns warranty seller reviews reliability buy retailer product`
+  const currencyPreference = effectiveCurrency
+    ? ` prices and checkout in ${effectiveCurrency} local currency`
+    : ''
+  const searchQuery = `${parsed.query}${market}${currencyPreference}${budget ? ` hard price range ${budget}` : ''} current price original price discount sale shipping delivery cost availability returns warranty seller reviews reliability buy retailer product`
   const response = await fetch('https://api.exa.ai/search', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': exaApiKey },
     body: JSON.stringify({
       query: searchQuery,
-      type: 'auto',
+      type: 'deep',
       numResults:
         parsed.minPrice !== undefined || parsed.maxPrice !== undefined
           ? 8
           : (parsed.maxResults ?? 5),
       contents: { highlights: { maxCharacters: 1_200 } },
     }),
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(25_000),
   })
 
   const body = (await response.json()) as ExaResponse
@@ -437,7 +384,7 @@ export async function searchProducts(
       .map((value) => value.trim().slice(0, 900))
       .filter(Boolean)
       .slice(0, 4)
-    const price = findPrice(highlights)
+    const price = findPrice(highlights, effectiveCurrency)
     const discount = findEvidence(highlights, DISCOUNT_PATTERN, 110)
     const shipping = findEvidence(highlights, SHIPPING_PATTERN, 150)
     const reliability = sellerReliability(
@@ -469,9 +416,9 @@ export async function searchProducts(
 
   const matchingProducts = products.filter((product) => {
     const hasBudget = parsed.minPrice !== undefined || parsed.maxPrice !== undefined
-    if (!hasBudget) return true
+    if (!hasBudget && !effectiveCurrency) return true
     if (product.priceValue === undefined || !product.priceCurrency) return false
-    if (parsed.currency && product.priceCurrency !== parsed.currency) return false
+    if (effectiveCurrency && product.priceCurrency !== effectiveCurrency) return false
     if (parsed.minPrice !== undefined && product.priceValue < parsed.minPrice) return false
     if (parsed.maxPrice !== undefined && product.priceValue > parsed.maxPrice) return false
     return true
@@ -482,7 +429,7 @@ export async function searchProducts(
     searchedAt: new Date().toISOString(),
     budget:
       parsed.minPrice !== undefined || parsed.maxPrice !== undefined
-        ? { minPrice: parsed.minPrice, maxPrice: parsed.maxPrice, currency: parsed.currency }
+        ? { minPrice: parsed.minPrice, maxPrice: parsed.maxPrice, currency: effectiveCurrency }
         : undefined,
     products: matchingProducts,
     ...(matchingProducts.length === 0 &&

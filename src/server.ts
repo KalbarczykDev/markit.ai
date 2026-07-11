@@ -3,6 +3,7 @@ import handler from '@tanstack/react-start/server-entry'
 import { handleAuthRequest } from './auth'
 import { handleBillingRequest, type BillingEnv } from './billing'
 import {
+  checkoutInputSchema,
   getProductToolDefinitions,
   productSystemPromptForCountry,
   productDisplayInputSchema,
@@ -19,6 +20,7 @@ type ExecutionContext = {
 
 type Env = BillingEnv & {
   OPENAI_API_KEY?: string
+  EXA_API_KEY?: string
 }
 
 type WorkerWebSocket = WebSocket & { accept(): void }
@@ -42,6 +44,8 @@ type ProductSessionState = {
   analysisGeneration: number
 }
 
+type CheckoutContext = { origin: string; cookie: string }
+
 function sendJson(socket: WorkerWebSocket, value: unknown): void {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(value))
 }
@@ -53,14 +57,16 @@ async function executeAgentTool(
   client: WorkerWebSocket,
   state: ProductSessionState,
   context: ExecutionContext,
+  checkoutContext: CheckoutContext,
 ): Promise<void> {
   if (!call.call_id) return
   let output: unknown
   try {
     if (call.name === 'search_products') {
+      if (!env.EXA_API_KEY) throw new Error('Product search is not configured')
       const input = productSearchInputSchema.parse(JSON.parse(call.arguments || '{}'))
       sendJson(client, { type: 'markit.status', status: 'searching', query: input.query })
-      const result = await searchProducts(input)
+      const result = await searchProducts(input, env.EXA_API_KEY)
       state.latestProducts = result.products
       state.analysisGeneration += 1
       const generation = state.analysisGeneration
@@ -100,6 +106,25 @@ async function executeAgentTool(
           products,
         })
         output = { displayed: true, productCount: products.length }
+      }
+    } else if (call.name === 'begin_checkout') {
+      checkoutInputSchema.parse(JSON.parse(call.arguments || '{}'))
+      const checkoutResponse = await handleBillingRequest(
+        new Request(`${checkoutContext.origin}/api/billing/checkout`, {
+          method: 'POST',
+          headers: { cookie: checkoutContext.cookie, origin: checkoutContext.origin },
+        }),
+        env,
+      )
+      const checkout = (await checkoutResponse.json()) as { url?: string; message?: string }
+      if (!checkoutResponse.ok || !checkout.url) {
+        output = {
+          error: checkout.message || 'Secure checkout could not be opened.',
+          checkoutOpened: false,
+        }
+      } else {
+        sendJson(client, { type: 'markit.checkout', url: checkout.url })
+        output = { checkoutOpened: true, destination: 'Stripe-hosted Checkout' }
       }
     } else {
       return
@@ -199,12 +224,19 @@ async function realtimeSocket(
       const message = JSON.parse(event.data) as RealtimeToolCall
       if (
         message.type === 'response.function_call_arguments.done' &&
-        (message.name === 'search_products' || message.name === 'control_product_display') &&
+        (message.name === 'search_products' ||
+          message.name === 'control_product_display' ||
+          message.name === 'begin_checkout') &&
         message.call_id &&
         !handledToolCalls.has(message.call_id)
       ) {
         handledToolCalls.add(message.call_id)
-        context.waitUntil(executeAgentTool(message, env, upstream, server, productState, context))
+        context.waitUntil(
+          executeAgentTool(message, env, upstream, server, productState, context, {
+            origin,
+            cookie: request.headers.get('cookie') ?? '',
+          }),
+        )
       }
     } catch {}
   })

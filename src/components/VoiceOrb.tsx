@@ -11,6 +11,7 @@ type OrbState =
   | 'listening'
   | 'thinking'
   | 'searching'
+  | 'checkout'
   | 'speaking'
   | 'search-error'
   | 'error'
@@ -53,6 +54,7 @@ const STATUS_LABELS: Record<OrbState, string> = {
   listening: 'Listening',
   thinking: 'Checking product data',
   searching: 'Searching products',
+  checkout: 'Opening secure checkout',
   speaking: 'Speaking',
   'search-error': 'Search unavailable',
   error: 'Connection unavailable',
@@ -362,6 +364,23 @@ export function VoiceOrb() {
           const { url, analysis } = message
           if (url && analysis) {
             setAnalyses((previous) => ({ ...previous, [url]: analysis }))
+          }
+        } else if (message.type === 'markit.checkout' && message.url) {
+          try {
+            const checkoutUrl = new URL(message.url)
+            if (
+              checkoutUrl.protocol !== 'https:' ||
+              checkoutUrl.hostname !== 'checkout.stripe.com'
+            ) {
+              throw new Error('Unexpected checkout destination')
+            }
+            setState('checkout')
+            window.setTimeout(() => {
+              shutdown(false)
+              window.location.assign(checkoutUrl)
+            }, 2_000)
+          } catch {
+            setState('error')
           }
         } else if (message.type === 'response.done') {
           const responseId = message.response?.id
