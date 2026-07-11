@@ -61,10 +61,19 @@
   }
 
   body {
+    display: grid;
+    height: 100svh;
+    place-items: center;
     overflow: hidden;
     background:
       radial-gradient(circle at 15% 0%, rgba(217, 209, 255, 0.46), transparent 34rem),
       radial-gradient(circle at 100% 100%, rgba(132, 229, 244, 0.28), transparent 38rem), #e7e4de;
+  }
+
+  @media (orientation: landscape) and (min-width: 900px) {
+    body {
+      background: #050508;
+    }
   }
 
   button,
@@ -95,10 +104,19 @@
   .deck-shell {
     position: relative;
     display: block;
-    width: 100%;
+    width: 100vw;
     height: 100svh;
     overflow: hidden;
     background: var(--paper);
+    container-type: size;
+  }
+
+  /* Big landscape screens: lock the deck to a 16:9 stage, letterboxed on dark. */
+  @media (orientation: landscape) and (min-width: 900px) {
+    .deck-shell {
+      width: min(100vw, calc(100svh * 16 / 9));
+      height: min(100svh, calc(100vw * 9 / 16));
+    }
   }
 
   .deck-toolbar {
@@ -110,14 +128,14 @@
     margin-inline: auto;
     align-items: center;
     justify-content: space-between;
-    padding-inline: clamp(1.25rem, 4vw, 4.5rem);
+    padding-inline: clamp(1.25rem, 4cqw, 4.5rem);
     pointer-events: none;
   }
 
   .deck-toolbar {
     position: absolute;
     inset: 0 0 auto;
-    height: clamp(4rem, 9vh, 5.5rem);
+    height: clamp(4rem, 9cqh, 5.5rem);
   }
 
   .wordmark {
@@ -194,12 +212,12 @@
     position: absolute;
     inset: 0;
     display: grid;
-    width: min(100%, 1600px);
+    width: 100%;
     height: 100%;
-    margin-inline: auto;
     overflow: hidden;
-    padding: clamp(1.25rem, 3.7vw, 4.5rem);
-    row-gap: clamp(1.5rem, 4.5vh, 3.5rem);
+    padding: clamp(1.25rem, 3.7cqw, 4.5rem);
+    padding-inline: max(clamp(1.25rem, 3.7cqw, 4.5rem), calc((100% - 1600px) / 2 + 4.5rem));
+    row-gap: clamp(1.5rem, 4.5cqh, 3.5rem);
     align-content: center;
     isolation: isolate;
   }
@@ -217,7 +235,7 @@
 
   .slide-heading {
     align-self: center;
-    transform: translateY(-2vh);
+    transform: translateY(-2cqh);
   }
 
   .product-copy,
@@ -225,7 +243,7 @@
   .trust-copy,
   .finale-copy {
     align-self: center;
-    transform: translateY(-7vh);
+    transform: translateY(-7cqh);
   }
 
   .cover-copy {
@@ -237,9 +255,9 @@
   }
 
   .eyebrow {
-    margin: 0 0 clamp(0.85rem, 1.8vh, 1.4rem);
+    margin: 0 0 clamp(0.85rem, 1.8cqh, 1.4rem);
     color: var(--violet);
-    font-size: clamp(0.65rem, 1vw, 0.8rem);
+    font-size: clamp(0.65rem, 1cqw, 0.8rem);
     font-weight: 750;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -262,11 +280,11 @@
   }
 
   h1 {
-    font-size: clamp(3.4rem, 7.3vw, 8.8rem);
+    font-size: clamp(3.4rem, 7.3cqw, 8.8rem);
   }
 
   h2 {
-    font-size: clamp(2.65rem, 5.15vw, 6.2rem);
+    font-size: clamp(2.65rem, 5.15cqw, 6.2rem);
   }
 
   h1 span,
@@ -276,7 +294,7 @@
 
   h3 {
     color: var(--ink);
-    font-size: clamp(1.05rem, 1.5vw, 1.5rem);
+    font-size: clamp(1.05rem, 1.5cqw, 1.5rem);
     line-height: 1.15;
     letter-spacing: -0.03em;
   }
@@ -285,7 +303,7 @@
     max-width: 38rem;
     margin-bottom: 0;
     color: var(--ink-soft);
-    font-size: clamp(1rem, 1.45vw, 1.38rem);
+    font-size: clamp(1rem, 1.45cqw, 1.38rem);
     line-height: 1.55;
     text-wrap: pretty;
   }
@@ -294,7 +312,7 @@
     align-self: end;
     margin: 0;
     color: rgba(23, 23, 29, 0.56);
-    font-size: clamp(0.75rem, 1vw, 0.9rem);
+    font-size: clamp(0.75rem, 1cqw, 0.9rem);
     font-weight: 600;
     letter-spacing: 0.03em;
   }
@@ -302,8 +320,8 @@
   .slide-count {
     position: absolute;
     z-index: 22;
-    right: clamp(1.25rem, 4vw, 4.5rem);
-    bottom: clamp(1.35rem, 3.4vh, 2.4rem);
+    right: clamp(1.25rem, 4cqw, 4.5rem);
+    bottom: clamp(1.35rem, 3.4cqh, 2.4rem);
     margin: 0;
     color: rgba(23, 23, 29, 0.44);
     font-size: 0.74rem;
@@ -397,17 +415,17 @@
   }
 
   .orb-large {
-    width: clamp(14rem, 28vw, 31rem);
+    width: clamp(14rem, 28cqw, 31rem);
     aspect-ratio: 1;
   }
 
   .orb-xlarge {
-    width: min(36vw, 30rem);
+    width: min(36cqw, 30rem);
     aspect-ratio: 1;
   }
 
   .orb-medium {
-    width: clamp(8.5rem, 16vw, 13rem);
+    width: clamp(8.5rem, 16cqw, 13rem);
     aspect-ratio: 1;
   }
 
@@ -453,16 +471,16 @@
     grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
     grid-template-rows: 1fr auto;
     align-items: center;
-    column-gap: 4vw;
+    column-gap: 4cqw;
   }
 
   .slide-cover::after {
     position: absolute;
     z-index: -1;
-    width: min(76vw, 84rem);
+    width: min(76cqw, 84rem);
     aspect-ratio: 0.9;
     top: 50%;
-    right: calc(clamp(5.5rem, 7vw, 9rem) + min(18vw, 24rem) - min(38vw, 42rem));
+    right: calc(clamp(5.5rem, 7cqw, 9rem) + min(18cqw, 24rem) - min(38cqw, 42rem));
     border-radius: 46% 54% 50% 50%;
     background:
       radial-gradient(circle at 58% 38%, rgba(114, 92, 255, 0.38), transparent 36%),
@@ -481,13 +499,13 @@
   }
 
   .cover-copy .lede {
-    margin-top: clamp(1.5rem, 3vh, 2.5rem);
+    margin-top: clamp(1.5rem, 3cqh, 2.5rem);
   }
 
   .hero-visual {
     position: absolute;
     z-index: 1;
-    inset: clamp(1.45rem, 2.7vh, 2.25rem) 0 0;
+    inset: clamp(1.45rem, 2.7cqh, 2.25rem) 0 0;
     min-height: 0;
     pointer-events: none;
   }
@@ -495,16 +513,16 @@
   .coffee-beans {
     position: absolute;
     z-index: 1;
-    width: min(42vw, 44rem);
+    width: min(42cqw, 44rem);
     height: 82%;
     top: 8%;
-    right: clamp(4rem, 6vw, 8rem);
+    right: clamp(4rem, 6cqw, 8rem);
   }
 
   .coffee-beans span {
     position: absolute;
     display: block;
-    width: clamp(6.5rem, 9.5vw, 11rem);
+    width: clamp(6.5rem, 9.5cqw, 11rem);
     aspect-ratio: 0.68;
     border-radius: 50%;
     background:
@@ -543,7 +561,7 @@
     width: auto;
     max-width: min(75%, 55rem);
     height: 100%;
-    right: clamp(5.5rem, 7vw, 9rem);
+    right: clamp(5.5rem, 7cqw, 9rem);
     bottom: 0;
     object-fit: contain;
     object-position: bottom right;
@@ -616,15 +634,15 @@
     width: 100%;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: stretch;
-    gap: clamp(1rem, 2.2vw, 2.5rem);
+    gap: clamp(1rem, 2.2cqw, 2.5rem);
   }
 
   .tension-card {
     display: flex;
-    min-height: clamp(14rem, 31vh, 22rem);
+    min-height: clamp(14rem, 31cqh, 22rem);
     flex-direction: column;
     justify-content: space-between;
-    padding: clamp(1.4rem, 2.5vw, 2.6rem);
+    padding: clamp(1.4rem, 2.5cqw, 2.6rem);
     border-radius: var(--radius-lg);
   }
 
@@ -647,7 +665,7 @@
     max-width: 32rem;
     margin: 0;
     color: rgba(255, 255, 255, 0.68);
-    font-size: clamp(0.9rem, 1.25vw, 1.15rem);
+    font-size: clamp(0.9rem, 1.25cqw, 1.15rem);
     line-height: 1.55;
   }
 
@@ -678,7 +696,7 @@
     align-items: baseline;
     gap: 1rem;
     color: var(--ink-soft);
-    font-size: clamp(0.88rem, 1.15vw, 1.08rem);
+    font-size: clamp(0.88rem, 1.15cqw, 1.08rem);
   }
 
   .friction-list span {
@@ -689,7 +707,7 @@
 
   .turn-arrow {
     display: grid;
-    width: clamp(2rem, 4vw, 4rem);
+    width: clamp(2rem, 4cqw, 4rem);
     place-items: center;
   }
 
@@ -705,11 +723,11 @@
   .slide-product {
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.85fr);
     align-items: start;
-    column-gap: 7vw;
+    column-gap: 7cqw;
   }
 
   .product-copy .lede {
-    margin-top: clamp(1.5rem, 3vh, 2.5rem);
+    margin-top: clamp(1.5rem, 3cqh, 2.5rem);
   }
 
   .state-row {
@@ -717,7 +735,7 @@
     max-width: 32rem;
     align-items: center;
     gap: 0.8rem;
-    margin-top: clamp(1.6rem, 3.5vh, 2.6rem);
+    margin-top: clamp(1.6rem, 3.5cqh, 2.6rem);
     color: rgba(23, 23, 29, 0.5);
     font-size: 0.67rem;
     font-weight: 700;
@@ -793,8 +811,8 @@
 
   .journey li {
     position: relative;
-    min-height: clamp(13rem, 30vh, 20rem);
-    padding: 1.6rem clamp(1rem, 2vw, 2rem);
+    min-height: clamp(13rem, 30cqh, 20rem);
+    padding: 1.6rem clamp(1rem, 2cqw, 2rem);
     border-left: 1px solid rgba(23, 23, 29, 0.12);
   }
 
@@ -816,7 +834,7 @@
     max-width: 15rem;
     margin: 0;
     color: var(--ink-soft);
-    font-size: clamp(0.78rem, 1vw, 0.95rem);
+    font-size: clamp(0.78rem, 1cqw, 0.95rem);
     line-height: 1.5;
   }
 
@@ -828,7 +846,7 @@
     align-items: center;
     justify-content: center;
     gap: 3px;
-    margin-top: clamp(1.2rem, 3vh, 2.4rem);
+    margin-top: clamp(1.2rem, 3cqh, 2.4rem);
     border-radius: 50%;
     color: var(--violet);
     background: var(--white);
@@ -938,15 +956,15 @@
     display: grid;
     grid-template-columns: 1fr minmax(5rem, 0.45fr) 1.15fr minmax(2rem, 0.2fr) 1fr;
     align-items: center;
-    gap: clamp(0.6rem, 1.5vw, 1.6rem);
+    gap: clamp(0.6rem, 1.5cqw, 1.6rem);
   }
 
   .arch-node {
     display: flex;
-    min-height: clamp(7.5rem, 17vh, 10rem);
+    min-height: clamp(7.5rem, 17cqh, 10rem);
     flex-direction: column;
     justify-content: center;
-    padding: clamp(1rem, 1.8vw, 1.7rem);
+    padding: clamp(1rem, 1.8cqw, 1.7rem);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.04);
@@ -968,14 +986,14 @@
 
   .arch-node strong {
     color: var(--white);
-    font-size: clamp(0.88rem, 1.22vw, 1.2rem);
+    font-size: clamp(0.88rem, 1.22cqw, 1.2rem);
     letter-spacing: -0.02em;
   }
 
   .arch-node small {
     margin-top: 0.4rem;
     color: rgba(255, 255, 255, 0.5);
-    font-size: clamp(0.66rem, 0.85vw, 0.8rem);
+    font-size: clamp(0.66rem, 0.85cqw, 0.8rem);
   }
 
   .arch-connection {
@@ -1033,7 +1051,7 @@
   }
 
   .arch-destinations .arch-node {
-    min-height: clamp(5rem, 12vh, 7.2rem);
+    min-height: clamp(5rem, 12cqh, 7.2rem);
   }
 
   .tech-strip {
@@ -1059,17 +1077,17 @@
     display: grid;
     grid-template-columns: 0.9fr 1.1fr;
     align-items: start;
-    gap: 7vw;
+    gap: 7cqw;
   }
 
   .trust-copy .lede {
-    margin-top: clamp(1.5rem, 3vh, 2.5rem);
+    margin-top: clamp(1.5rem, 3cqh, 2.5rem);
   }
 
   .principle-card {
     position: relative;
     margin: 0;
-    padding: clamp(2rem, 4vw, 4.2rem);
+    padding: clamp(2rem, 4cqw, 4.2rem);
     border-radius: var(--radius-lg);
     color: var(--white);
     background: var(--ink);
@@ -1078,7 +1096,7 @@
 
   .principle-card p {
     margin: 0;
-    font-size: clamp(1.2rem, 2.1vw, 2.15rem);
+    font-size: clamp(1.2rem, 2.1cqw, 2.15rem);
     font-weight: 570;
     line-height: 1.32;
     letter-spacing: -0.035em;
@@ -1131,7 +1149,7 @@
 
   .trust-rules span {
     color: var(--ink-soft);
-    font-size: clamp(0.76rem, 0.95vw, 0.9rem);
+    font-size: clamp(0.76rem, 0.95cqw, 0.9rem);
     line-height: 1.45;
   }
 
@@ -1143,12 +1161,12 @@
   .engineering-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: clamp(0.9rem, 1.5vw, 1.5rem);
+    gap: clamp(0.9rem, 1.5cqw, 1.5rem);
   }
 
   .engineering-grid article {
-    min-height: clamp(13rem, 29vh, 19rem);
-    padding: clamp(1.4rem, 2.5vw, 2.5rem);
+    min-height: clamp(13rem, 29cqh, 19rem);
+    padding: clamp(1.4rem, 2.5cqw, 2.5rem);
     border: 1px solid rgba(23, 23, 29, 0.09);
     border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.5);
@@ -1161,7 +1179,7 @@
   .engineering-grid p {
     margin: 0;
     color: var(--ink-soft);
-    font-size: clamp(0.78rem, 1vw, 0.96rem);
+    font-size: clamp(0.78rem, 1cqw, 0.96rem);
     line-height: 1.55;
   }
 
@@ -1252,7 +1270,7 @@
   .north-star p {
     margin: 0;
     color: var(--ink);
-    font-size: clamp(0.9rem, 1.25vw, 1.15rem);
+    font-size: clamp(0.9rem, 1.25cqw, 1.15rem);
     font-weight: 620;
   }
 
@@ -1266,8 +1284,8 @@
   }
 
   .progress-column {
-    min-height: clamp(15rem, 34vh, 22rem);
-    padding: clamp(1.4rem, 2.7vw, 2.8rem);
+    min-height: clamp(15rem, 34cqh, 22rem);
+    padding: clamp(1.4rem, 2.7cqw, 2.8rem);
   }
 
   .progress-column + .progress-column {
@@ -1303,7 +1321,7 @@
     position: relative;
     padding-left: 1.35rem;
     color: var(--ink);
-    font-size: clamp(0.82rem, 1.1vw, 1.04rem);
+    font-size: clamp(0.82rem, 1.1cqw, 1.04rem);
     font-weight: 580;
     line-height: 1.35;
   }
@@ -1331,7 +1349,7 @@
   }
 
   .roadmap article {
-    padding-right: clamp(1.5rem, 3vw, 3.5rem);
+    padding-right: clamp(1.5rem, 3cqw, 3.5rem);
   }
 
   .phase {
@@ -1377,7 +1395,7 @@
     max-width: 20rem;
     margin: 0;
     color: var(--ink-soft);
-    font-size: clamp(0.78rem, 1vw, 0.96rem);
+    font-size: clamp(0.78rem, 1cqw, 0.96rem);
     line-height: 1.55;
   }
 
@@ -1385,7 +1403,7 @@
     grid-template-columns: 0.62fr 1fr;
     grid-template-rows: 1fr auto;
     align-items: start;
-    column-gap: 7vw;
+    column-gap: 7cqw;
     color: var(--white);
     background:
       radial-gradient(circle at 20% 50%, rgba(114, 92, 255, 0.22), transparent 29rem), var(--dark);
@@ -1403,7 +1421,7 @@
   }
 
   .finale-copy h2 {
-    font-size: clamp(3.1rem, 6.3vw, 7.6rem);
+    font-size: clamp(3.1rem, 6.3cqw, 7.6rem);
   }
 
   .finale-copy h2 span {
@@ -1411,9 +1429,9 @@
   }
 
   .finale-copy > p:last-child {
-    margin: clamp(1.5rem, 3vh, 2.5rem) 0 0;
+    margin: clamp(1.5rem, 3cqh, 2.5rem) 0 0;
     color: rgba(255, 255, 255, 0.58);
-    font-size: clamp(0.95rem, 1.35vw, 1.25rem);
+    font-size: clamp(0.95rem, 1.35cqw, 1.25rem);
   }
 
   .finale-tag {
@@ -1462,7 +1480,7 @@
     }
 
     .hero-visual .orb-large {
-      width: min(30vh, 52vw);
+      width: min(30cqh, 52cqw);
     }
 
     .visual-caption,
@@ -1479,7 +1497,7 @@
     }
 
     .orb-stage .orb-xlarge {
-      width: min(29vh, 52vw);
+      width: min(29cqh, 52cqw);
     }
 
     .tension-grid {
@@ -1572,17 +1590,17 @@
     }
 
     .slide-finale .orb-medium {
-      width: min(15vh, 30vw);
+      width: min(15cqh, 30cqw);
     }
   }
 
   @media (max-width: 560px) and (orientation: portrait) {
     h1 {
-      font-size: clamp(3rem, 14vw, 4.4rem);
+      font-size: clamp(3rem, 14cqw, 4.4rem);
     }
 
     h2 {
-      font-size: clamp(2.2rem, 10.5vw, 3.5rem);
+      font-size: clamp(2.2rem, 10.5cqw, 3.5rem);
     }
 
     .eyebrow {
@@ -1814,7 +1832,7 @@
     }
 
     .finale-copy h2 {
-      font-size: clamp(2.8rem, 13vw, 4.2rem);
+      font-size: clamp(2.8rem, 13cqw, 4.2rem);
     }
   }
 
@@ -1838,7 +1856,7 @@
     .slide-heading h2,
     .product-copy h2,
     .trust-copy h2 {
-      font-size: clamp(2.1rem, 5vw, 3.5rem);
+      font-size: clamp(2.1rem, 5cqw, 3.5rem);
     }
 
     .tension-card,
