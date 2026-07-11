@@ -258,11 +258,11 @@ The deterministic policy engine returns exactly one decision plus structured rea
 
 | Decision               | Meaning                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------- |
-| `REJECT`               | A hard product, price, seller, delivery, mandate, or safety rule failed                 |
+| `REJECT`               | A hard product, price, seller, delivery, mandate, or safety rule failed                |
 | `WAIT_AND_MONITOR`     | No eligible exact offer exists now, but the confirmed brief permits waiting            |
 | `PROPOSE_ALTERNATIVES` | Eligible alternatives exist within explicitly allowed flexibility                      |
 | `ASK_USER`             | Material information is missing, ambiguous, changed, or borderline                     |
-| `READY_FOR_APPROVAL`   | The offer is eligible, but the mandate requires one-tap human approval                  |
+| `READY_FOR_APPROVAL`   | The offer is eligible, but the mandate requires one-tap human approval                 |
 | `AUTO_BUY`             | Every hard gate passes and the active mandate explicitly permits autonomous purchasing |
 
 The model may explain the result in natural language. It may not replace the decision, alter reason codes, or bypass a failed gate.
