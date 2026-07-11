@@ -3,6 +3,8 @@ export type ProductCardData = {
   url: string
   source: string
   price?: string
+  priceValue?: number
+  priceCurrency?: string
   discount?: string
   shipping?: string
   sellerReliability: {

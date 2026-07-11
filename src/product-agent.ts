@@ -11,6 +11,8 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 - Treat search_products results as the only source of truth for current ecommerce facts. Never answer current product questions from memory.
 - Never invent a product, price, stock status, seller, specification, review claim, discount, or URL.
 - If the results do not verify a claim, say that it could not be verified. Ask one focused follow-up question or suggest a narrower search.
+- Treat an explicit budget as a hard constraint. Pass it through minPrice, maxPrice, and currency. Never show or recommend an offer whose verified current price is outside that range, and never assume an offer with an unknown price fits.
+- If no verified product matches the requested price range, call control_product_display with action "close", then say plainly that no product was found at that price. Offer to broaden the budget or change one requirement. Do not show fallback or near-budget listings unless the user agrees.
 - Clearly distinguish facts found in results from your own concise comparison or recommendation.
 - Mention the retailer or source for important facts. Offer to provide the source link when useful.
 - Compare current and discounted pricing, delivery or shipping costs, return or warranty evidence, and seller reliability whenever those facts are available.
@@ -30,6 +32,7 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 
 # Tool behavior
 - Build a specific search query from the user's requirements, including product type, key constraints, location or currency when known, current and original prices, discounts, shipping or delivery costs, returns, warranty, reviews, and seller reliability.
+- When the shopper states any minimum, maximum, or range, always provide the corresponding numeric budget fields to search_products. Do not encode a known budget only inside the query string.
 - Search again when the first result set is insufficient, conflicting, stale, or does not answer the user's constraints.
 - After a successful product search, call control_product_display with action "show" before giving the spoken answer. Select up to six useful result URLs when the result set is large.
 - Call control_product_display with action "close" when the user asks to hide, close, clear, or dismiss the products, when the user is finished shopping, or when the conversation moves away from the displayed results.
@@ -63,6 +66,24 @@ export const productSearchInputSchema = z.object({
     .max(8)
     .optional()
     .describe('Number of product search results to return'),
+  minPrice: z
+    .number()
+    .nonnegative()
+    .optional()
+    .describe('Hard minimum product price from the shopper, without a currency symbol'),
+  maxPrice: z
+    .number()
+    .positive()
+    .optional()
+    .describe('Hard maximum product price or budget from the shopper, without a currency symbol'),
+  currency: z
+    .string()
+    .trim()
+    .min(3)
+    .max(3)
+    .toUpperCase()
+    .optional()
+    .describe('ISO 4217 currency code for minPrice and maxPrice, such as USD, EUR, GBP, or PLN'),
 })
 
 export const productDisplayInputSchema = z.object({
@@ -149,10 +170,44 @@ function safeAssetUrl(value: string | null | undefined): string | undefined {
   }
 }
 
-function findPrice(highlights: string[]): string | undefined {
+function parsePrice(display: string): { value: number; currency: string } | undefined {
+  const currency = display.includes('$')
+    ? 'USD'
+    : display.includes('€')
+      ? 'EUR'
+      : display.includes('£')
+        ? 'GBP'
+        : display.match(/\b(?:USD|EUR|GBP|PLN)\b/i)?.[0].toUpperCase()
+  const raw = display.match(/\d[\d,.]*/)?.[0]
+  if (!currency || !raw) return undefined
+
+  const lastComma = raw.lastIndexOf(',')
+  const lastDot = raw.lastIndexOf('.')
+  let normalized = raw
+  if (lastComma >= 0 && lastDot >= 0) {
+    const decimal = lastComma > lastDot ? ',' : '.'
+    const thousands = decimal === ',' ? /\./g : /,/g
+    normalized = raw.replace(thousands, '').replace(decimal, '.')
+  } else if (lastComma >= 0) {
+    normalized = /,\d{2}$/.test(raw)
+      ? raw.replace(/\./g, '').replace(',', '.')
+      : raw.replace(/,/g, '')
+  } else if (lastDot >= 0 && !/\.\d{2}$/.test(raw)) {
+    normalized = raw.replace(/\./g, '')
+  }
+
+  const value = Number(normalized)
+  return Number.isFinite(value) && value >= 0 ? { value, currency } : undefined
+}
+
+function findPrice(
+  highlights: string[],
+): { display: string; value: number; currency: string } | undefined {
   for (const highlight of highlights) {
-    const match = highlight.match(PRICE_PATTERN)?.[0]
-    if (match) return match.replace(/\s+/g, ' ').trim()
+    const display = highlight.match(PRICE_PATTERN)?.[0]?.replace(/\s+/g, ' ').trim()
+    if (!display) continue
+    const parsed = parsePrice(display)
+    if (parsed) return { display, ...parsed }
   }
   return undefined
 }
@@ -234,14 +289,24 @@ export async function searchProducts(
 }> {
   const parsed = productSearchInputSchema.parse(input)
   const market = parsed.country ? ` in ${parsed.country}` : ''
-  const searchQuery = `${parsed.query}${market} current price original price discount sale shipping delivery cost availability returns warranty seller reviews reliability buy retailer product`
+  const budget = [
+    parsed.minPrice !== undefined ? `minimum ${parsed.minPrice}` : '',
+    parsed.maxPrice !== undefined ? `maximum ${parsed.maxPrice}` : '',
+    parsed.currency || '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const searchQuery = `${parsed.query}${market}${budget ? ` hard price range ${budget}` : ''} current price original price discount sale shipping delivery cost availability returns warranty seller reviews reliability buy retailer product`
   const response = await fetch('https://api.exa.ai/search', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': exaApiKey },
     body: JSON.stringify({
       query: searchQuery,
       type: 'auto',
-      numResults: parsed.maxResults ?? 5,
+      numResults:
+        parsed.minPrice !== undefined || parsed.maxPrice !== undefined
+          ? 8
+          : (parsed.maxResults ?? 5),
       contents: { highlights: { maxCharacters: 1_200 } },
     }),
     signal: AbortSignal.timeout(15_000),
@@ -262,7 +327,12 @@ export async function searchProducts(
     const price = findPrice(highlights)
     const discount = findEvidence(highlights, DISCOUNT_PATTERN, 110)
     const shipping = findEvidence(highlights, SHIPPING_PATTERN, 150)
-    const reliability = sellerReliability(highlights, result.publishedDate, price, shipping)
+    const reliability = sellerReliability(
+      highlights,
+      result.publishedDate,
+      price?.display,
+      shipping,
+    )
     const image = safeAssetUrl(result.image)
     const favicon = safeAssetUrl(result.favicon)
     return [
@@ -270,7 +340,9 @@ export async function searchProducts(
         title: title.slice(0, 240),
         url,
         source: sourceName(url),
-        ...(price ? { price } : {}),
+        ...(price
+          ? { price: price.display, priceValue: price.value, priceCurrency: price.currency }
+          : {}),
         ...(discount ? { discount } : {}),
         ...(shipping ? { shipping } : {}),
         sellerReliability: reliability,
@@ -282,5 +354,27 @@ export async function searchProducts(
     ]
   })
 
-  return { query: parsed.query, searchedAt: new Date().toISOString(), products }
+  const matchingProducts = products.filter((product) => {
+    const hasBudget = parsed.minPrice !== undefined || parsed.maxPrice !== undefined
+    if (!hasBudget) return true
+    if (product.priceValue === undefined || !product.priceCurrency) return false
+    if (parsed.currency && product.priceCurrency !== parsed.currency) return false
+    if (parsed.minPrice !== undefined && product.priceValue < parsed.minPrice) return false
+    if (parsed.maxPrice !== undefined && product.priceValue > parsed.maxPrice) return false
+    return true
+  })
+
+  return {
+    query: parsed.query,
+    searchedAt: new Date().toISOString(),
+    budget:
+      parsed.minPrice !== undefined || parsed.maxPrice !== undefined
+        ? { minPrice: parsed.minPrice, maxPrice: parsed.maxPrice, currency: parsed.currency }
+        : undefined,
+    products: matchingProducts,
+    ...(matchingProducts.length === 0 &&
+    (parsed.minPrice !== undefined || parsed.maxPrice !== undefined)
+      ? { message: 'No product with a verified current price matched the requested range.' }
+      : {}),
+  }
 }
