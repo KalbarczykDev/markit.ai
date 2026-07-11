@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { FavoriteListing } from '@/favorite-types'
 import type { ProductAnalysis, ProductCardData } from '@/product-types'
+import { INPUT_RATE, base64ToPcm, bytesToBase64, floatToPcm16, resample } from '@/realtime-audio'
 
 import { ProductResults } from './ProductResults'
 
@@ -45,61 +46,21 @@ type RealtimeMessage = {
   favorites?: FavoriteListing[]
   url?: string
   analysis?: ProductAnalysis
+  phase?: 'started' | 'completed'
+  tool?: string
   response?: { id?: string }
 }
-
-const INPUT_RATE = 24_000
 
 const STATUS_LABELS: Record<OrbState, string> = {
   idle: 'Tap to talk',
   connecting: 'Connecting',
   listening: 'Listening',
   thinking: 'Checking product data',
-  searching: 'Searching products',
+  searching: 'Researching products',
   checkout: 'Opening secure checkout',
   speaking: 'Speaking',
   'search-error': 'Search unavailable',
   error: 'Connection unavailable',
-}
-
-function floatToPcm16(input: Float32Array): Int16Array {
-  const output = new Int16Array(input.length)
-  for (let index = 0; index < input.length; index += 1) {
-    const sample = Math.max(-1, Math.min(1, input[index] ?? 0))
-    output[index] = sample < 0 ? sample * 0x8000 : sample * 0x7fff
-  }
-  return output
-}
-
-function resample(input: Float32Array, sourceRate: number): Float32Array {
-  if (sourceRate === INPUT_RATE) return input
-  const ratio = sourceRate / INPUT_RATE
-  const length = Math.round(input.length / ratio)
-  const output = new Float32Array(length)
-  for (let index = 0; index < length; index += 1) {
-    const position = index * ratio
-    const left = Math.floor(position)
-    const right = Math.min(left + 1, input.length - 1)
-    const mix = position - left
-    output[index] = (input[left] ?? 0) * (1 - mix) + (input[right] ?? 0) * mix
-  }
-  return output
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = ''
-  const chunkSize = 0x8000
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
-  }
-  return btoa(binary)
-}
-
-function base64ToPcm(base64: string): Int16Array {
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
-  return new Int16Array(bytes.buffer)
 }
 
 export function VoiceOrb() {
@@ -121,6 +82,7 @@ export function VoiceOrb() {
   const activeOutputRef = useRef<ActiveOutput | null>(null)
   const activeResponseRef = useRef<string | null>(null)
   const interruptedResponsesRef = useRef(new Set<string>())
+  const toolActiveRef = useRef(false)
   const runningRef = useRef(false)
   const mountedRef = useRef(true)
 
@@ -178,6 +140,7 @@ export function VoiceOrb() {
     playbackAtRef.current = 0
     activeResponseRef.current = null
     interruptedResponsesRef.current.clear()
+    toolActiveRef.current = false
     setLevel(0)
     if (updateState && mountedRef.current) {
       setProductDisplay({ isOpen: false, heading: 'Current picks', products: [] })
@@ -329,6 +292,7 @@ export function VoiceOrb() {
           setState('thinking')
         } else if (message.type === 'response.output_audio.delta') {
           if (
+            !toolActiveRef.current &&
             message.delta &&
             message.item_id &&
             message.response_id &&
@@ -345,13 +309,28 @@ export function VoiceOrb() {
           const responseId = activeOutputRef.current?.responseId ?? activeResponseRef.current
           if (responseId) interruptedResponsesRef.current.add(responseId)
           haltPlayback(socket, true)
-          setState('listening')
+          if (!toolActiveRef.current) setState('listening')
         } else if (message.type === 'input_audio_buffer.speech_stopped') {
-          setState('thinking')
+          if (!toolActiveRef.current) setState('thinking')
         } else if (message.type === 'markit.status') {
           if (message.status === 'searching') setState('searching')
           else if (message.status === 'thinking') setState('thinking')
           else if (message.status === 'search-error') setState('search-error')
+        } else if (message.type === 'markit.tool') {
+          toolActiveRef.current = message.phase === 'started'
+          if (message.phase === 'started') {
+            haltPlayback()
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({ type: 'input_audio_buffer.clear' }))
+            }
+            setState(
+              message.tool === 'search_products'
+                ? 'searching'
+                : message.tool === 'begin_checkout'
+                  ? 'checkout'
+                  : 'thinking',
+            )
+          }
         } else if (message.type === 'markit.products') {
           if (message.action === 'show' && message.products?.length) {
             setProductDisplay({
@@ -416,6 +395,7 @@ export function VoiceOrb() {
         for (const sample of input) sum += sample * sample
         const level = Math.sqrt(sum / input.length)
         if (playbackSourcesRef.current.size === 0) setLevel(Math.min(1, level * 7))
+        if (toolActiveRef.current) return
         if (socket.readyState !== WebSocket.OPEN) return
         const pcm = floatToPcm16(resample(input, context.sampleRate))
         socket.send(

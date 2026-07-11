@@ -62,6 +62,7 @@ async function executeAgentTool(
   shopper: ShopperContext,
 ): Promise<void> {
   if (!call.call_id) return
+  sendJson(client, { type: 'markit.tool', phase: 'started', tool: call.name })
   let output: unknown
   try {
     if (call.name === 'search_products') {
@@ -168,6 +169,7 @@ async function executeAgentTool(
       output: JSON.stringify(output),
     },
   })
+  sendJson(client, { type: 'markit.tool', phase: 'completed', tool: call.name })
   sendJson(upstream, { type: 'response.create' })
 }
 
