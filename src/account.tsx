@@ -20,18 +20,19 @@ export type AccountProfile = {
   walletCents: number
   theme: ThemePreference
   offersEnabled: boolean
+  billingStatus: string
+  stripeProductId?: string
 }
 
 type Credentials = { email: string; password: string }
-type SignUpDetails = Credentials & { name: string }
 
 type AccountContextValue = {
   profile: AccountProfile | null
   isLoading: boolean
   theme: ThemePreference
   login: (credentials: Credentials) => Promise<void>
-  signup: (details: SignUpDetails) => Promise<void>
   logout: () => Promise<void>
+  refreshProfile: () => Promise<void>
   setTheme: (theme: ThemePreference) => void
   updateProfile: (
     profile: Partial<Pick<AccountProfile, 'name' | 'email' | 'offersEnabled'>>,
@@ -45,6 +46,8 @@ type AuthUser = {
   walletCents?: number
   theme?: string
   offersEnabled?: boolean
+  billingStatus?: string
+  stripeProductId?: string | null
 }
 
 type AuthError = { message?: string; error?: string }
@@ -74,6 +77,8 @@ function accountProfile(user: AuthUser): AccountProfile {
     walletCents: user.walletCents ?? 0,
     theme,
     offersEnabled: user.offersEnabled ?? true,
+    billingStatus: user.billingStatus ?? 'inactive',
+    ...(user.stripeProductId ? { stripeProductId: user.stripeProductId } : {}),
   }
 }
 
@@ -145,22 +150,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     applyTheme(nextProfile.theme)
   }, [])
 
-  const signup = useCallback(async (details: SignUpDetails) => {
-    const { user } = await authRequest<UserResponse>('/api/auth/sign-up/email', {
-      method: 'POST',
-      body: JSON.stringify(details),
-    })
-    if (!user) throw new Error('Your account could not be created.')
-    const nextProfile = accountProfile(user)
-    setProfile(nextProfile)
-    setThemeState(nextProfile.theme)
-    localStorage.setItem('markit-theme', nextProfile.theme)
-    applyTheme(nextProfile.theme)
-  }, [])
-
   const logout = useCallback(async () => {
     await authRequest('/api/auth/sign-out', { method: 'POST' })
     setProfile(null)
+  }, [])
+
+  const refreshProfile = useCallback(async () => {
+    setProfile(await currentProfile())
   }, [])
 
   const updateProfile = useCallback(
@@ -208,12 +204,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       isLoading,
       theme,
       login,
-      signup,
       logout,
+      refreshProfile,
       setTheme,
       updateProfile,
     }),
-    [profile, isLoading, theme, login, signup, logout, setTheme, updateProfile],
+    [profile, isLoading, theme, login, logout, refreshProfile, setTheme, updateProfile],
   )
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>
@@ -304,18 +300,9 @@ export function AccountBar() {
             </Dropdown>
           </>
         ) : (
-          <div className="signed-out-actions">
-            <Button variant="ghost" size="sm" onPress={() => void navigate({ to: '/login' })}>
-              Log in
-            </Button>
-            <Button
-              size="sm"
-              className="create-account-button"
-              onPress={() => void navigate({ to: '/signup' })}
-            >
-              Create account
-            </Button>
-          </div>
+          <Button variant="ghost" size="sm" onPress={() => void navigate({ to: '/login' })}>
+            Log in
+          </Button>
         )}
       </div>
     </header>
