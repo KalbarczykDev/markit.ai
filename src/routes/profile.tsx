@@ -80,7 +80,6 @@ function ProfilePage() {
 
         <section className="profile-intro" aria-labelledby="profile-title">
           <div>
-            <span className="eyebrow">Your account</span>
             <h1 id="profile-title">Profile & preferences</h1>
             <p>Manage the details and settings Markit uses for your shopping experience.</p>
           </div>
