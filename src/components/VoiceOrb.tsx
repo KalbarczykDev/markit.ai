@@ -1,6 +1,10 @@
 import { Button, Spinner } from '@heroui/react'
 import { useEffect, useRef, useState } from 'react'
 
+import type { ProductCardData } from '@/product-types'
+
+import { ProductResults } from './ProductResults'
+
 type OrbState =
   | 'idle'
   | 'connecting'
@@ -33,6 +37,9 @@ type RealtimeMessage = {
   item_id?: string
   response_id?: string
   content_index?: number
+  action?: 'show' | 'close'
+  heading?: string
+  products?: ProductCardData[]
   response?: { id?: string }
 }
 
@@ -91,6 +98,11 @@ function base64ToPcm(base64: string): Int16Array {
 
 export function VoiceOrb() {
   const [state, setState] = useState<OrbState>('idle')
+  const [productDisplay, setProductDisplay] = useState<{
+    isOpen: boolean
+    heading: string
+    products: ProductCardData[]
+  }>({ isOpen: false, heading: 'Current picks', products: [] })
   const socketRef = useRef<WebSocket | null>(null)
   const audioRef = useRef<AudioRuntime | null>(null)
   const orbRef = useRef<HTMLButtonElement>(null)
@@ -159,7 +171,10 @@ export function VoiceOrb() {
     activeResponseRef.current = null
     interruptedResponsesRef.current.clear()
     setLevel(0)
-    if (updateState && mountedRef.current) setState('idle')
+    if (updateState && mountedRef.current) {
+      setProductDisplay({ isOpen: false, heading: 'Current picks', products: [] })
+      setState('idle')
+    }
   }
 
   useEffect(
@@ -328,6 +343,16 @@ export function VoiceOrb() {
           if (message.status === 'searching') setState('searching')
           else if (message.status === 'thinking') setState('thinking')
           else if (message.status === 'search-error') setState('search-error')
+        } else if (message.type === 'markit.products') {
+          if (message.action === 'show' && message.products?.length) {
+            setProductDisplay({
+              isOpen: true,
+              heading: message.heading || 'Current picks',
+              products: message.products,
+            })
+          } else if (message.action === 'close') {
+            setProductDisplay({ isOpen: false, heading: 'Current picks', products: [] })
+          }
         } else if (message.type === 'response.done') {
           const responseId = message.response?.id
           if (responseId) interruptedResponsesRef.current.delete(responseId)
@@ -377,28 +402,39 @@ export function VoiceOrb() {
   const isPending = state === 'connecting' || state === 'thinking' || state === 'searching'
 
   return (
-    <div className="voice-agent">
-      <Button
-        ref={orbRef}
-        type="button"
-        isIconOnly
-        variant="ghost"
-        className="voice-orb"
-        data-state={state}
-        aria-label={label}
-        title={label}
-        onPress={() => void start()}
-      >
-        <span className="orb-halo" />
-        <span className="orb-shell">
-          <span className="orb-core" />
-          <span className="orb-wave" />
-        </span>
-      </Button>
-      <div className="agent-status" data-state={state} role="status" aria-live="polite">
-        {isPending ? <Spinner size="sm" color="current" /> : <span className="agent-status-dot" />}
-        <span>{STATUS_LABELS[state]}</span>
+    <div className={`commerce-agent ${productDisplay.isOpen ? 'has-products' : ''}`}>
+      <div className="voice-agent">
+        <Button
+          ref={orbRef}
+          type="button"
+          isIconOnly
+          variant="ghost"
+          className="voice-orb"
+          data-state={state}
+          aria-label={label}
+          title={label}
+          onPress={() => void start()}
+        >
+          <span className="orb-halo" />
+          <span className="orb-shell">
+            <span className="orb-core" />
+            <span className="orb-wave" />
+          </span>
+        </Button>
+        <div className="agent-status" data-state={state} role="status" aria-live="polite">
+          {isPending ? (
+            <Spinner size="sm" color="current" />
+          ) : (
+            <span className="agent-status-dot" />
+          )}
+          <span>{STATUS_LABELS[state]}</span>
+        </div>
       </div>
+      <ProductResults
+        isOpen={productDisplay.isOpen}
+        heading={productDisplay.heading}
+        products={productDisplay.products}
+      />
     </div>
   )
 }

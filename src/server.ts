@@ -3,9 +3,11 @@ import handler from '@tanstack/react-start/server-entry'
 import {
   PRODUCT_SYSTEM_PROMPT,
   getProductToolDefinitions,
+  productDisplayInputSchema,
   productSearchInputSchema,
   searchProducts,
 } from './product-agent'
+import type { ProductCardData } from './product-types'
 
 type ExecutionContext = {
   waitUntil(promise: Promise<unknown>): void
@@ -33,36 +35,68 @@ type RealtimeToolCall = {
   arguments?: string
 }
 
+type ProductSessionState = {
+  latestProducts: ProductCardData[]
+}
+
 function sendJson(socket: WorkerWebSocket, value: unknown): void {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(value))
 }
 
-async function executeProductSearch(
+async function executeAgentTool(
   call: RealtimeToolCall,
   env: Env,
   upstream: WorkerWebSocket,
   client: WorkerWebSocket,
+  state: ProductSessionState,
 ): Promise<void> {
   if (!call.call_id) return
   let output: unknown
   try {
-    if (!env.EXA_API_KEY) throw new Error('Product search is not configured')
-    const input = productSearchInputSchema.parse(JSON.parse(call.arguments || '{}'))
-    sendJson(client, { type: 'markit.status', status: 'searching', query: input.query })
-    const result = await searchProducts(input, env.EXA_API_KEY)
-    output = result
-    sendJson(client, {
-      type: 'markit.status',
-      status: 'thinking',
-      resultCount: result.products.length,
-    })
+    if (call.name === 'search_products') {
+      if (!env.EXA_API_KEY) throw new Error('Product search is not configured')
+      const input = productSearchInputSchema.parse(JSON.parse(call.arguments || '{}'))
+      sendJson(client, { type: 'markit.status', status: 'searching', query: input.query })
+      const result = await searchProducts(input, env.EXA_API_KEY)
+      state.latestProducts = result.products
+      output = result
+      sendJson(client, {
+        type: 'markit.status',
+        status: 'thinking',
+        resultCount: result.products.length,
+      })
+    } else if (call.name === 'control_product_display') {
+      const input = productDisplayInputSchema.parse(JSON.parse(call.arguments || '{}'))
+      if (input.action === 'close') {
+        sendJson(client, { type: 'markit.products', action: 'close' })
+        output = { displayed: false, productCount: 0 }
+      } else {
+        const requested = new Set(input.productUrls ?? [])
+        const products = (
+          requested.size
+            ? state.latestProducts.filter((product) => requested.has(product.url))
+            : state.latestProducts
+        ).slice(0, 6)
+        if (!products.length) throw new Error('No researched products are available to display')
+        sendJson(client, {
+          type: 'markit.products',
+          action: 'show',
+          heading: input.heading || 'Current picks',
+          products,
+        })
+        output = { displayed: true, productCount: products.length }
+      }
+    } else {
+      return
+    }
   } catch {
     output = {
-      error:
-        'Current product data could not be retrieved. Do not make an unverified product claim.',
-      products: [],
+      error: 'The requested ecommerce action could not be completed. Do not claim it succeeded.',
     }
-    sendJson(client, { type: 'markit.status', status: 'search-error' })
+    if (call.name === 'search_products') {
+      state.latestProducts = []
+      sendJson(client, { type: 'markit.status', status: 'search-error' })
+    }
   }
 
   sendJson(upstream, {
@@ -115,6 +149,7 @@ async function realtimeSocket(
   const server = pair[1]
   server.accept()
   const handledToolCalls = new Set<string>()
+  const productState: ProductSessionState = { latestProducts: [] }
 
   server.addEventListener('message', (event) => {
     if (typeof event.data !== 'string') return
@@ -130,6 +165,7 @@ async function realtimeSocket(
               instructions: PRODUCT_SYSTEM_PROMPT,
               tools: toolDefinitions,
               tool_choice: 'auto',
+              parallel_tool_calls: false,
             },
           }),
         )
@@ -146,12 +182,12 @@ async function realtimeSocket(
       const message = JSON.parse(event.data) as RealtimeToolCall
       if (
         message.type === 'response.function_call_arguments.done' &&
-        message.name === 'search_products' &&
+        (message.name === 'search_products' || message.name === 'control_product_display') &&
         message.call_id &&
         !handledToolCalls.has(message.call_id)
       ) {
         handledToolCalls.add(message.call_id)
-        context.waitUntil(executeProductSearch(message, env, upstream, server))
+        context.waitUntil(executeAgentTool(message, env, upstream, server, productState))
       }
     } catch {}
   })

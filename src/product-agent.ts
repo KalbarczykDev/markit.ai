@@ -1,6 +1,8 @@
 import { experimental_getRealtimeToolDefinitions, tool } from 'ai'
 import { z } from 'zod'
 
+import type { ProductCardData } from './product-types'
+
 export const PRODUCT_SYSTEM_PROMPT = `# Role and objective
 You are Markit, a voice-first ecommerce product research agent. Help shoppers discover and compare products using current, verifiable commerce data.
 
@@ -19,6 +21,9 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 # Tool behavior
 - Build a specific search query from the user's requirements, including product type, key constraints, location or currency when known, and intent such as current price or availability.
 - Search again when the first result set is insufficient, conflicting, stale, or does not answer the user's constraints.
+- After a successful product search, call control_product_display with action "show" before giving the spoken answer. Select up to six useful result URLs when the result set is large.
+- Call control_product_display with action "close" when the user asks to hide, close, clear, or dismiss the products, when the user is finished shopping, or when the conversation moves away from the displayed results.
+- The product display is entirely tool-controlled. Never claim cards are visible or closed unless control_product_display succeeds.
 - Do not announce raw tool syntax. A short natural preamble such as "I'll check current listings" is appropriate before searching.
 
 # Voice style
@@ -50,12 +55,37 @@ export const productSearchInputSchema = z.object({
     .describe('Number of product search results to return'),
 })
 
+export const productDisplayInputSchema = z.object({
+  action: z
+    .enum(['show', 'close'])
+    .describe('Whether to show product cards or close and remove them'),
+  productUrls: z
+    .array(z.string().url())
+    .max(6)
+    .optional()
+    .describe('For show, the result URLs to display. Omit to display the strongest results.'),
+  heading: z
+    .string()
+    .trim()
+    .min(2)
+    .max(80)
+    .optional()
+    .describe('A short shopper-friendly heading for the product cards'),
+})
+
 const productTools = {
   search_products: tool({
     title: 'Search products',
     description:
       'Search the live web for current ecommerce products, retailer listings, prices, availability, specifications, and reviews. This tool must be used before making any current product claim or recommendation.',
     inputSchema: productSearchInputSchema,
+    strict: true,
+  }),
+  control_product_display: tool({
+    title: 'Control product display',
+    description:
+      'Open, update, or close the structured product-card interface. Use show after product research and close when the shopper asks to dismiss results or moves on.',
+    inputSchema: productDisplayInputSchema,
     strict: true,
   }),
 }
@@ -74,6 +104,8 @@ type ExaResult = {
   url?: string | null
   publishedDate?: string | null
   author?: string | null
+  image?: string | null
+  favicon?: string | null
   highlights?: string[] | null
 }
 
@@ -91,19 +123,34 @@ function sourceName(url: string): string {
   }
 }
 
+const PRICE_PATTERN =
+  /(?:[$€£]\s?\d[\d,.]*(?:\.\d{2})?|\d[\d,.]*(?:\.\d{2})?\s?(?:USD|EUR|GBP|PLN))/i
+
+function safeAssetUrl(value: string | null | undefined): string | undefined {
+  if (!value) return undefined
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' ? url.toString() : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function findPrice(highlights: string[]): string | undefined {
+  for (const highlight of highlights) {
+    const match = highlight.match(PRICE_PATTERN)?.[0]
+    if (match) return match.replace(/\s+/g, ' ').trim()
+  }
+  return undefined
+}
+
 export async function searchProducts(
   input: z.infer<typeof productSearchInputSchema>,
   exaApiKey: string,
 ): Promise<{
   query: string
   searchedAt: string
-  products: Array<{
-    title: string
-    url: string
-    source: string
-    publishedDate?: string
-    highlights: string[]
-  }>
+  products: ProductCardData[]
 }> {
   const parsed = productSearchInputSchema.parse(input)
   const market = parsed.country ? ` in ${parsed.country}` : ''
@@ -128,16 +175,23 @@ export async function searchProducts(
     const title = result.title?.trim()
     const url = result.url?.trim()
     if (!title || !url || !/^https?:\/\//i.test(url)) return []
+    const highlights = (result.highlights ?? [])
+      .map((value) => value.trim().slice(0, 900))
+      .filter(Boolean)
+      .slice(0, 3)
+    const price = findPrice(highlights)
+    const image = safeAssetUrl(result.image)
+    const favicon = safeAssetUrl(result.favicon)
     return [
       {
         title: title.slice(0, 240),
         url,
         source: sourceName(url),
+        ...(price ? { price } : {}),
+        ...(image ? { image } : {}),
+        ...(favicon ? { favicon } : {}),
         ...(result.publishedDate ? { publishedDate: result.publishedDate } : {}),
-        highlights: (result.highlights ?? [])
-          .map((value) => value.trim().slice(0, 900))
-          .filter(Boolean)
-          .slice(0, 3),
+        highlights,
       },
     ]
   })

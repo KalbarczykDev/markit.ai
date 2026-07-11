@@ -50,9 +50,11 @@ Use `bun oxlint --type-aware` as the source of truth for linting and type analys
 - HeroUI interactions use `onPress`, not `onClick`.
 - Keep `resolve.dedupe: ['react', 'react-dom']` in Vite. A single React copy is required by React Aria overlays.
 - Use Tailwind v4 and the design tokens in `src/index.css`.
-- The interface is intentionally a single voice orb plus a compact live agent-status indicator. Do not add navigation, cards, transcripts, or conventional controls unless explicitly requested.
+- The primary interface is a voice orb plus a compact live agent-status indicator. Product cards are the only secondary surface: desktop results open in the right-hand panel and shift the orb left; viewports below 900px must use a controlled HeroUI v3 bottom `Drawer`.
 - Voice transport uses the same-origin `/api/realtime` WebSocket proxy to OpenAI's `gpt-realtime-2.1` model. Keep the API key server-side as the `OPENAI_API_KEY` Worker secret.
-- `src/product-agent.ts` owns the server-enforced ecommerce system prompt, AI SDK v7 `search_products` tool definition, input validation, and Exa result sanitization. Current product claims must be grounded in tool results.
+- `src/product-agent.ts` owns the server-enforced ecommerce system prompt, AI SDK v7 tool definitions, input validation, and Exa result sanitization. Current product claims must be grounded in `search_products` results.
+- The model alone opens, updates, and closes product results through `control_product_display`. The client reacts to `markit.products` events; do not automatically show search results or add a separate manual panel toggle.
+- Product presentation uses HeroUI v3 compound `Card`, `Link`, and controlled `Drawer` APIs. Shared card data is typed in `src/product-types.ts`; desktop/mobile rendering lives in `src/components/ProductResults.tsx`.
 - The Worker injects the trusted prompt and tools into every `session.update`; never trust browser-supplied instructions or tool definitions.
 - Exa uses the `EXA_API_KEY` Worker secret. Never expose it to the browser or return raw upstream errors.
 - Microphone audio is mono PCM16 at 24 kHz. Use semantic VAD with automatic response creation and interruption enabled.
