@@ -174,7 +174,7 @@ function PriceAlertsPage() {
                 </div>
 
                 <p className="alert-privacy-note">
-                  Product URLs are checked by GPT-5.6 Terra with web search. Your bot token stays
+                  Product URLs are checked by GPT-5.6 Luna with web search. Your bot token stays
                   server-side and is never sent to the browser.
                 </p>
                 <div className="form-actions">
