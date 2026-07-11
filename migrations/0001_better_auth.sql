@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS `user` (
   `email` text NOT NULL,
   `email_verified` integer DEFAULT 0 NOT NULL,
   `image` text,
-  `wallet_cents` integer DEFAULT 0 NOT NULL,
   `theme` text DEFAULT 'system' NOT NULL,
   `offers_enabled` integer DEFAULT 1 NOT NULL,
   `created_at` integer NOT NULL,
