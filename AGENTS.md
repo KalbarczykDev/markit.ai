@@ -6,7 +6,7 @@ Guidance for AI agents working in this repository. This file is the single sourc
 
 `markit.ai` is a realtime voice assistant built on this frontend foundation:
 
-- Bun package manager and task runner
+- Bun package manager and task runner; CI always installs the latest canary
 - Vite 8
 - React 19 with React Compiler
 - TanStack Start and TanStack Router for SSR and file-based routing
@@ -24,15 +24,16 @@ The app is a single package. Routes live in `src/routes`, the router is in `src/
 
 Run commands from the repository root.
 
-| Task                          | Command                   |
-| ----------------------------- | ------------------------- |
-| Install                       | `bun install`             |
-| Develop                       | `bun run dev`             |
-| Build                         | `bun run build`           |
-| Type-aware lint and type gate | `bun run lint:type-aware` |
-| Format                        | `bun run fmt`             |
-| Full verification             | `bun run verify`          |
-| Deploy manually               | `bun run deploy`          |
+| Task                          | Command                                           |
+| ----------------------------- | ------------------------------------------------- |
+| Install                       | `bun install`                                     |
+| Develop                       | `bun run dev`                                     |
+| Build                         | `bun run build`                                   |
+| Type-aware lint and type gate | `bun run lint:type-aware`                         |
+| Format                        | `bun run fmt`                                     |
+| Full verification             | `bun run verify`                                  |
+| Deploy manually               | `bun run deploy`                                  |
+| Reproduce CI locally          | `bun install --frozen-lockfile && bun run verify` |
 
 ## Required gate
 
@@ -63,9 +64,11 @@ Use `bun oxlint --type-aware` as the source of truth for linting and type analys
 
 The Worker is named `markit-ai` and configured in `wrangler.toml`. `bun run build` emits `dist/server/wrangler.json`; deploy that generated configuration with Wrangler.
 
-For manual deployment, provide `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` through the process environment. Never write credentials into tracked files.
+`.github/workflows/deploy.yml` is the production CI/CD pipeline. Pull requests to `main` run the verification gate. Pushes to `main` and manual dispatches run the same gate and then deploy the already-built output, avoiding a duplicate install or build. The workflow uses the latest Bun canary, a frozen lockfile, Bun's package cache, least-privilege GitHub permissions, and concurrency cancellation for superseded runs.
 
-When a task includes deployment and `bun run verify` is green, deploy, verify the live URL, then commit and push only the files changed for the task.
+GitHub Actions requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. Runtime secrets such as `OPENAI_API_KEY` and `EXA_API_KEY` remain Worker secrets and are preserved across deployments. Never write credential values into tracked files or workflow YAML.
+
+When a task includes deployment and `bun run verify` is green, commit and push only the files changed for the task. The push deploys automatically; verify the workflow and live URL when deployment behavior changes or a failure is reported.
 
 ## UI work
 

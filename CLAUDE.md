@@ -4,7 +4,7 @@
 
 ## Operational notes
 
-- Use Bun for all package and script operations.
+- Use Bun for all package and script operations. GitHub Actions installs the latest Bun canary and uses `bun install --frozen-lockfile`.
 - Type-aware Oxlint is the lint and type-analysis authority. Never run `tsc` or `tsc --noEmit` as a project gate.
 - HeroUI is v3 only. Import from `@heroui/react`, use compound v3 APIs where applicable, and use `onPress` for interactions.
 - The production target is the Cloudflare Worker `markit-ai` in account `90c76061632cca916b79973127d31e87`.
@@ -18,6 +18,6 @@
 
 1. Run `bun run fmt` when source or docs change.
 2. Run `bun run verify` and fix every failure.
-3. Deploy when requested and verify the live response.
-4. Commit only task files with a Conventional Commit message.
-5. Push to `origin main` when requested or already authorized by the task.
+3. Commit only task files with a Conventional Commit message.
+4. Push to `origin main` when requested or already authorized by the task. `.github/workflows/deploy.yml` verifies and deploys the production Worker automatically.
+5. Check the workflow and live response when CI/CD behavior changes or a deployment failure is reported.
