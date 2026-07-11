@@ -1,6 +1,7 @@
 import handler from '@tanstack/react-start/server-entry'
 
-import { handleAuthRequest, type AuthEnv } from './auth'
+import { handleAuthRequest } from './auth'
+import { handleBillingRequest, type BillingEnv } from './billing'
 import {
   getProductToolDefinitions,
   productSystemPromptForCountry,
@@ -16,7 +17,7 @@ type ExecutionContext = {
   passThroughOnException(): void
 }
 
-type Env = AuthEnv & {
+type Env = BillingEnv & {
   OPENAI_API_KEY?: string
 }
 
@@ -229,6 +230,7 @@ export default {
     const url = new URL(request.url)
     if (url.pathname === '/api/realtime') return realtimeSocket(request, env, context)
     if (url.pathname.startsWith('/api/auth/')) return handleAuthRequest(request, env)
+    if (url.pathname.startsWith('/api/billing/')) return handleBillingRequest(request, env)
     return startFetch(request, env, context)
   },
 }
