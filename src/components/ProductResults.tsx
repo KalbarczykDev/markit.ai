@@ -1,6 +1,7 @@
 import { Button, Card, Chip, Disclosure, Drawer, Link, Meter } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
+import { downloadCsv } from '@/csv'
 import type {
   ProductAnalysis,
   ProductCardData,
@@ -267,15 +268,11 @@ const SORT_LABELS: Record<ProductSortMode, string> = {
   reliability_desc: 'Seller reliability',
 }
 
-function csvCell(value: string | number | undefined): string {
-  const text = value === undefined ? '' : String(value)
-  return `"${text.replaceAll('"', '""')}"`
-}
-
 function saveProductsCsv(products: ProductCardData[]) {
-  const rows = [
+  downloadCsv(
+    'markit-listings.csv',
     ['Product', 'Price', 'Currency', 'Delivery', 'Reliability', 'Retailer', 'URL'],
-    ...products.map((product) => [
+    products.map((product) => [
       product.title,
       product.price,
       product.priceCurrency,
@@ -284,16 +281,7 @@ function saveProductsCsv(products: ProductCardData[]) {
       product.source,
       product.url,
     ]),
-  ]
-  const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = 'markit-listings.csv'
-  document.body.append(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
+  )
 }
 
 function ProductTable({

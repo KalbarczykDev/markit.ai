@@ -1,11 +1,26 @@
-import { Card, Link, Spinner } from '@heroui/react'
+import { Button, Card, Link, Spinner } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
+import { downloadCsv } from '@/csv'
 import type { SavedListing } from '@/saved-listing-types'
 
 export function SavedListings() {
   const [listings, setListings] = useState<SavedListing[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+
+  const exportListings = () => {
+    downloadCsv(
+      'markit-saved-listings.csv',
+      ['Product', 'Price', 'Retailer', 'Saved at', 'URL'],
+      listings.map((listing) => [
+        listing.title,
+        listing.price,
+        listing.source,
+        listing.savedAt,
+        listing.url,
+      ]),
+    )
+  }
 
   useEffect(() => {
     let active = true
@@ -36,9 +51,19 @@ export function SavedListings() {
             Products saved from the shopping agent or results table.
           </Card.Description>
         </div>
-        {status === 'ready' && listings.length ? (
-          <span className="listing-count">{listings.length}</span>
-        ) : null}
+        <div className="saved-listings-actions">
+          {status === 'ready' && listings.length ? (
+            <span className="listing-count">{listings.length}</span>
+          ) : null}
+          <Button
+            size="sm"
+            variant="ghost"
+            isDisabled={status !== 'ready' || listings.length === 0}
+            onPress={exportListings}
+          >
+            Export CSV
+          </Button>
+        </div>
       </Card.Header>
       <Card.Content>
         {status === 'loading' ? (
