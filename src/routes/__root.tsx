@@ -1,5 +1,7 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
 
+import { AccountBar, AccountProvider } from '@/account'
+
 import appCss from '@/index.css?url'
 
 export const Route = createRootRoute({
@@ -29,7 +31,10 @@ function RootDocument() {
         <HeadContent />
       </head>
       <body>
-        <Outlet />
+        <AccountProvider>
+          <AccountBar />
+          <Outlet />
+        </AccountProvider>
         <Scripts />
       </body>
     </html>
