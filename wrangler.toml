@@ -6,13 +6,19 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 binding = "ASSETS"
 
-[[durable_objects.bindings]]
-name = "ACCOUNT_STORE"
-class_name = "AccountStore"
+[[d1_databases]]
+binding = "DB"
+database_name = "markit-ai-users"
+database_id = "b48bb8a6-d233-4b4b-85a6-5a1f0f8b344c"
+migrations_dir = "migrations"
 
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["AccountStore"]
+
+[[migrations]]
+tag = "v2"
+deleted_classes = ["AccountStore"]
 
 [observability]
 enabled = true

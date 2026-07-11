@@ -38,7 +38,18 @@ type AccountContextValue = {
   ) => Promise<void>
 }
 
-type AuthResponse = { user?: AccountProfile | null; error?: string }
+type AuthUser = {
+  id: string
+  name: string
+  email: string
+  walletCents?: number
+  theme?: string
+  offersEnabled?: boolean
+}
+
+type AuthError = { message?: string; error?: string }
+type UserResponse = { user?: AuthUser | null }
+type SessionResponse = { user?: AuthUser | null; session?: unknown }
 
 const AccountContext = createContext<AccountContextValue | null>(null)
 
@@ -53,7 +64,20 @@ function applyTheme(preference: ThemePreference) {
   document.documentElement.style.colorScheme = resolved
 }
 
-async function authRequest(path: string, init?: RequestInit) {
+function accountProfile(user: AuthUser): AccountProfile {
+  const theme: ThemePreference =
+    user.theme === 'light' || user.theme === 'dark' ? user.theme : 'system'
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    walletCents: user.walletCents ?? 0,
+    theme,
+    offersEnabled: user.offersEnabled ?? true,
+  }
+}
+
+async function authRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers)
   if (init?.body) headers.set('Content-Type', 'application/json')
   const response = await fetch(path, {
@@ -61,9 +85,16 @@ async function authRequest(path: string, init?: RequestInit) {
     credentials: 'same-origin',
     headers,
   })
-  const data = (await response.json()) as AuthResponse
-  if (!response.ok) throw new Error(data.error || 'The account request could not be completed.')
-  return data
+  const data = (await response.json()) as T & AuthError
+  if (!response.ok) {
+    throw new Error(data.message || data.error || 'The account request could not be completed.')
+  }
+  return data as T
+}
+
+async function currentProfile() {
+  const { user } = await authRequest<SessionResponse>('/api/auth/get-session')
+  return user ? accountProfile(user) : null
 }
 
 export function AccountProvider({ children }: { children: ReactNode }) {
@@ -80,13 +111,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setThemeState(initialTheme)
     applyTheme(initialTheme)
 
-    void authRequest('/api/auth/session')
-      .then(({ user }) => {
-        setProfile(user ?? null)
-        if (user) {
-          setThemeState(user.theme)
-          localStorage.setItem('markit-theme', user.theme)
-          applyTheme(user.theme)
+    void currentProfile()
+      .then((userProfile) => {
+        setProfile(userProfile)
+        if (userProfile) {
+          setThemeState(userProfile.theme)
+          localStorage.setItem('markit-theme', userProfile.theme)
+          applyTheme(userProfile.theme)
         }
       })
       .catch(() => setProfile(null))
@@ -102,44 +133,57 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   }, [theme])
 
   const login = useCallback(async (credentials: Credentials) => {
-    const { user } = await authRequest('/api/auth/login', {
+    const { user } = await authRequest<UserResponse>('/api/auth/sign-in/email', {
       method: 'POST',
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({ ...credentials, rememberMe: true }),
     })
     if (!user) throw new Error('Your account could not be loaded.')
-    setProfile(user)
-    setThemeState(user.theme)
-    localStorage.setItem('markit-theme', user.theme)
-    applyTheme(user.theme)
+    const nextProfile = accountProfile(user)
+    setProfile(nextProfile)
+    setThemeState(nextProfile.theme)
+    localStorage.setItem('markit-theme', nextProfile.theme)
+    applyTheme(nextProfile.theme)
   }, [])
 
   const signup = useCallback(async (details: SignUpDetails) => {
-    const { user } = await authRequest('/api/auth/signup', {
+    const { user } = await authRequest<UserResponse>('/api/auth/sign-up/email', {
       method: 'POST',
       body: JSON.stringify(details),
     })
     if (!user) throw new Error('Your account could not be created.')
-    setProfile(user)
-    setThemeState(user.theme)
-    localStorage.setItem('markit-theme', user.theme)
-    applyTheme(user.theme)
+    const nextProfile = accountProfile(user)
+    setProfile(nextProfile)
+    setThemeState(nextProfile.theme)
+    localStorage.setItem('markit-theme', nextProfile.theme)
+    applyTheme(nextProfile.theme)
   }, [])
 
   const logout = useCallback(async () => {
-    await authRequest('/api/auth/logout', { method: 'POST' })
+    await authRequest('/api/auth/sign-out', { method: 'POST' })
     setProfile(null)
   }, [])
 
   const updateProfile = useCallback(
     async (updates: Partial<Pick<AccountProfile, 'name' | 'email' | 'offersEnabled'>>) => {
-      const { user } = await authRequest('/api/auth/profile', {
-        method: 'PATCH',
-        body: JSON.stringify(updates),
-      })
-      if (!user) throw new Error('Your profile could not be updated.')
-      setProfile(user)
+      if (updates.email && updates.email !== profile?.email) {
+        await authRequest('/api/auth/change-email', {
+          method: 'POST',
+          body: JSON.stringify({ newEmail: updates.email }),
+        })
+      }
+      const userUpdates = {
+        ...(updates.name !== undefined ? { name: updates.name } : {}),
+        ...(updates.offersEnabled !== undefined ? { offersEnabled: updates.offersEnabled } : {}),
+      }
+      if (Object.keys(userUpdates).length) {
+        await authRequest('/api/auth/update-user', {
+          method: 'POST',
+          body: JSON.stringify(userUpdates),
+        })
+      }
+      setProfile(await currentProfile())
     },
-    [],
+    [profile?.email],
   )
 
   const setTheme = useCallback(
@@ -149,12 +193,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       applyTheme(nextTheme)
       if (profile) {
         setProfile((current) => (current ? { ...current, theme: nextTheme } : current))
-        void authRequest('/api/auth/profile', {
-          method: 'PATCH',
+        void authRequest('/api/auth/update-user', {
+          method: 'POST',
           body: JSON.stringify({ theme: nextTheme }),
-        }).then(({ user }) => {
-          if (user) setProfile(user)
-        })
+        }).then(() => currentProfile().then(setProfile))
       }
     },
     [profile],

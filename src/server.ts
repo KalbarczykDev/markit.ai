@@ -1,6 +1,6 @@
 import handler from '@tanstack/react-start/server-entry'
 
-import { handleAuthRequest, type D1Database, type D1Result, type D1Statement } from './auth'
+import { handleAuthRequest, type AuthEnv } from './auth'
 import {
   getProductToolDefinitions,
   productSystemPromptForCountry,
@@ -16,89 +16,8 @@ type ExecutionContext = {
   passThroughOnException(): void
 }
 
-type Env = {
-  ACCOUNT_STORE?: DurableObjectNamespace
+type Env = AuthEnv & {
   OPENAI_API_KEY?: string
-}
-
-type DurableObjectStub = { fetch(request: Request): Promise<Response> }
-type DurableObjectNamespace = {
-  idFromName(name: string): unknown
-  get(id: unknown): DurableObjectStub
-}
-
-type SqlCursor<T> = { toArray(): T[] }
-type SqlStorage = { exec<T>(query: string, ...bindings: unknown[]): SqlCursor<T> }
-type DurableObjectState = {
-  storage: { sql: SqlStorage }
-  blockConcurrencyWhile<T>(callback: () => Promise<T>): Promise<T>
-}
-
-class DurableStatement implements D1Statement {
-  private values: unknown[] = []
-
-  constructor(
-    private readonly sql: SqlStorage,
-    private readonly query: string,
-  ) {}
-
-  bind(...values: unknown[]): D1Statement {
-    this.values = values
-    return this
-  }
-
-  async first<T>(): Promise<T | null> {
-    return this.sql.exec<T>(this.query, ...this.values).toArray()[0] ?? null
-  }
-
-  async run(): Promise<D1Result> {
-    this.sql.exec(this.query, ...this.values)
-    return { success: true }
-  }
-}
-
-class DurableDatabase implements D1Database {
-  constructor(private readonly sql: SqlStorage) {}
-
-  prepare(query: string): D1Statement {
-    return new DurableStatement(this.sql, query)
-  }
-}
-
-export class AccountStore {
-  private readonly database: D1Database
-
-  constructor(state: DurableObjectState) {
-    this.database = new DurableDatabase(state.storage.sql)
-    void state.blockConcurrencyWhile(async () => {
-      state.storage.sql.exec(`CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        email TEXT NOT NULL COLLATE NOCASE UNIQUE,
-        name TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        password_salt TEXT NOT NULL,
-        wallet_cents INTEGER NOT NULL DEFAULT 0 CHECK (wallet_cents >= 0),
-        theme TEXT NOT NULL DEFAULT 'system' CHECK (theme IN ('system', 'light', 'dark')),
-        offers_enabled INTEGER NOT NULL DEFAULT 1 CHECK (offers_enabled IN (0, 1)),
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
-      )`)
-      state.storage.sql.exec(`CREATE TABLE IF NOT EXISTS sessions (
-        token_hash TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        expires_at INTEGER NOT NULL,
-        created_at INTEGER NOT NULL
-      )`)
-      state.storage.sql.exec('CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id)')
-      state.storage.sql.exec(
-        'CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions(expires_at)',
-      )
-    })
-  }
-
-  fetch(request: Request): Promise<Response> {
-    return handleAuthRequest(request, { DB: this.database })
-  }
 }
 
 type WorkerWebSocket = WebSocket & { accept(): void }
@@ -309,13 +228,7 @@ export default {
   fetch(request: Request, env: Env, context: ExecutionContext): Promise<Response> | Response {
     const url = new URL(request.url)
     if (url.pathname === '/api/realtime') return realtimeSocket(request, env, context)
-    if (url.pathname.startsWith('/api/auth/')) {
-      if (!env.ACCOUNT_STORE) {
-        return Response.json({ error: 'Accounts are not configured.' }, { status: 503 })
-      }
-      const accountStore = env.ACCOUNT_STORE.get(env.ACCOUNT_STORE.idFromName('global'))
-      return accountStore.fetch(request)
-    }
+    if (url.pathname.startsWith('/api/auth/')) return handleAuthRequest(request, env)
     return startFetch(request, env, context)
   },
 }
