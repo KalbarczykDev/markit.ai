@@ -14,6 +14,9 @@ export type ProductAnalysis = {
   checks: ProductCheck[]
 }
 
+export type ProductViewMode = 'list' | 'grid' | 'table'
+export type ProductSortMode = 'relevance' | 'price_asc' | 'price_desc' | 'reliability_desc'
+
 export type ProductCardData = {
   title: string
   url: string

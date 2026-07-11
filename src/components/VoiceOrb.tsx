@@ -2,7 +2,12 @@ import { Button, Spinner } from '@heroui/react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { FavoriteListing } from '@/favorite-types'
-import type { ProductAnalysis, ProductCardData } from '@/product-types'
+import type {
+  ProductAnalysis,
+  ProductCardData,
+  ProductSortMode,
+  ProductViewMode,
+} from '@/product-types'
 import { INPUT_RATE, base64ToPcm, bytesToBase64, floatToPcm16, resample } from '@/realtime-audio'
 
 import { ProductResults } from './ProductResults'
@@ -13,7 +18,6 @@ type OrbState =
   | 'listening'
   | 'thinking'
   | 'searching'
-  | 'checkout'
   | 'speaking'
   | 'search-error'
   | 'error'
@@ -43,6 +47,8 @@ type RealtimeMessage = {
   action?: 'show' | 'close'
   heading?: string
   products?: ProductCardData[]
+  view?: ProductViewMode
+  sort?: ProductSortMode
   favorites?: FavoriteListing[]
   url?: string
   analysis?: ProductAnalysis
@@ -57,7 +63,6 @@ const STATUS_LABELS: Record<OrbState, string> = {
   listening: 'Listening',
   thinking: 'Checking product data',
   searching: 'Researching products',
-  checkout: 'Opening secure checkout',
   speaking: 'Speaking',
   'search-error': 'Search unavailable',
   error: 'Connection unavailable',
@@ -69,7 +74,9 @@ export function VoiceOrb() {
     isOpen: boolean
     heading: string
     products: ProductCardData[]
-  }>({ isOpen: false, heading: 'Current picks', products: [] })
+    view: ProductViewMode
+    sort: ProductSortMode
+  }>({ isOpen: false, heading: 'Current picks', products: [], view: 'list', sort: 'relevance' })
   const [analyses, setAnalyses] = useState<Record<string, ProductAnalysis>>({})
   const [favoritedUrls, setFavoritedUrls] = useState<ReadonlySet<string>>(new Set())
   const socketRef = useRef<WebSocket | null>(null)
@@ -145,7 +152,13 @@ export function VoiceOrb() {
     sessionReadyRef.current = false
     setLevel(0)
     if (updateState && mountedRef.current) {
-      setProductDisplay({ isOpen: false, heading: 'Current picks', products: [] })
+      setProductDisplay({
+        isOpen: false,
+        heading: 'Current picks',
+        products: [],
+        view: 'list',
+        sort: 'relevance',
+      })
       setAnalyses({})
       setState('idle')
     }
@@ -327,13 +340,7 @@ export function VoiceOrb() {
             if (socket.readyState === WebSocket.OPEN) {
               socket.send(JSON.stringify({ type: 'input_audio_buffer.clear' }))
             }
-            setState(
-              message.tool === 'search_products'
-                ? 'searching'
-                : message.tool === 'begin_checkout'
-                  ? 'checkout'
-                  : 'thinking',
-            )
+            setState(message.tool === 'search_products' ? 'searching' : 'thinking')
           }
         } else if (message.type === 'markit.products') {
           if (message.action === 'show' && message.products?.length) {
@@ -341,9 +348,17 @@ export function VoiceOrb() {
               isOpen: true,
               heading: message.heading || 'Current picks',
               products: message.products,
+              view: message.view ?? productDisplay.view,
+              sort: message.sort ?? productDisplay.sort,
             })
           } else if (message.action === 'close') {
-            setProductDisplay({ isOpen: false, heading: 'Current picks', products: [] })
+            setProductDisplay({
+              isOpen: false,
+              heading: 'Current picks',
+              products: [],
+              view: 'list',
+              sort: 'relevance',
+            })
             setAnalyses({})
           }
         } else if (message.type === 'markit.analysis') {
@@ -357,23 +372,6 @@ export function VoiceOrb() {
             for (const favorite of message.favorites ?? []) updated.add(favorite.url)
             return updated
           })
-        } else if (message.type === 'markit.checkout' && message.url) {
-          try {
-            const checkoutUrl = new URL(message.url)
-            if (
-              checkoutUrl.protocol !== 'https:' ||
-              checkoutUrl.hostname !== 'checkout.stripe.com'
-            ) {
-              throw new Error('Unexpected checkout destination')
-            }
-            setState('checkout')
-            window.setTimeout(() => {
-              shutdown(false)
-              window.location.assign(checkoutUrl)
-            }, 2_000)
-          } catch {
-            setState('error')
-          }
         } else if (message.type === 'response.done') {
           const responseId = message.response?.id
           if (responseId) interruptedResponsesRef.current.delete(responseId)
@@ -458,6 +456,8 @@ export function VoiceOrb() {
         products={productDisplay.products}
         analyses={analyses}
         favoritedUrls={favoritedUrls}
+        view={productDisplay.view}
+        sort={productDisplay.sort}
       />
     </div>
   )

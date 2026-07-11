@@ -1,7 +1,12 @@
 import { Card, Chip, Disclosure, Drawer, Link, Meter } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
-import type { ProductAnalysis, ProductCardData } from '@/product-types'
+import type {
+  ProductAnalysis,
+  ProductCardData,
+  ProductSortMode,
+  ProductViewMode,
+} from '@/product-types'
 
 const RELIABILITY_COLOR = {
   strong: 'accent',
@@ -138,15 +143,17 @@ function ProductCards({
   products,
   analyses,
   favoritedUrls,
+  view,
 }: {
   products: ProductCardData[]
   analyses: Record<string, ProductAnalysis>
   favoritedUrls: ReadonlySet<string>
+  view: Exclude<ProductViewMode, 'table'>
 }) {
   return (
-    <div className="product-card-list">
-      {products.map((product, index) => (
-        <Card className="product-card" key={`${product.url}-${index}`}>
+    <div className="product-card-list" data-view={view}>
+      {products.map((product) => (
+        <Card className="product-card" key={product.url}>
           <div className="product-image product-image-fallback" aria-hidden="true">
             {product.favicon ? (
               <img src={product.favicon} alt="" />
@@ -253,18 +260,109 @@ function ProductCards({
   )
 }
 
+const SORT_LABELS: Record<ProductSortMode, string> = {
+  relevance: 'Relevance',
+  price_asc: 'Price: low to high',
+  price_desc: 'Price: high to low',
+  reliability_desc: 'Seller reliability',
+}
+
+function ProductTable({
+  products,
+  favoritedUrls,
+}: {
+  products: ProductCardData[]
+  favoritedUrls: ReadonlySet<string>
+}) {
+  return (
+    <div className="product-table-wrap">
+      <table className="product-table">
+        <thead>
+          <tr>
+            <th scope="col">Product</th>
+            <th scope="col">Price</th>
+            <th scope="col">Delivery</th>
+            <th scope="col">Reliability</th>
+            <th scope="col">Retailer</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((product) => (
+            <tr key={product.url}>
+              <th scope="row">
+                <div className="product-table-name">
+                  {product.image ? <img src={product.image} alt="" loading="lazy" /> : null}
+                  <span>
+                    <strong>{product.title}</strong>
+                    {favoritedUrls.has(product.url) ? <small>✓ Saved</small> : null}
+                  </span>
+                </div>
+              </th>
+              <td>{product.price || 'Not verified'}</td>
+              <td>{product.shipping || 'Not verified'}</td>
+              <td>
+                <strong>{product.sellerReliability.score}/100</strong>
+                <small>{product.sellerReliability.label}</small>
+              </td>
+              <td>
+                <Link href={product.url} target="_blank" rel="noopener noreferrer">
+                  {product.source}
+                  <Link.Icon aria-hidden="true" />
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function ProductPresentation({
+  products,
+  analyses,
+  favoritedUrls,
+  view,
+  sort,
+}: {
+  products: ProductCardData[]
+  analyses: Record<string, ProductAnalysis>
+  favoritedUrls: ReadonlySet<string>
+  view: ProductViewMode
+  sort: ProductSortMode
+}) {
+  return (
+    <div className="product-arrangement" key={`${view}-${sort}`}>
+      {view === 'table' ? (
+        <ProductTable products={products} favoritedUrls={favoritedUrls} />
+      ) : (
+        <ProductCards
+          products={products}
+          analyses={analyses}
+          favoritedUrls={favoritedUrls}
+          view={view}
+        />
+      )}
+    </div>
+  )
+}
+
 export function ProductResults({
   isOpen,
   heading,
   products,
   analyses,
   favoritedUrls,
+  view,
+  sort,
 }: {
   isOpen: boolean
   heading: string
   products: ProductCardData[]
   analyses: Record<string, ProductAnalysis>
   favoritedUrls: ReadonlySet<string>
+  view: ProductViewMode
+  sort: ProductSortMode
 }) {
   const isMobile = useIsMobile()
   const hasProducts = isOpen && products.length > 0
@@ -277,9 +375,17 @@ export function ProductResults({
             <span>Live commerce data</span>
             <h2>{heading}</h2>
           </div>
-          <small>{products.length} results</small>
+          <small>
+            {view} · {SORT_LABELS[sort]} · {products.length} results
+          </small>
         </div>
-        <ProductCards products={products} analyses={analyses} favoritedUrls={favoritedUrls} />
+        <ProductPresentation
+          products={products}
+          analyses={analyses}
+          favoritedUrls={favoritedUrls}
+          view={view}
+          sort={sort}
+        />
       </aside>
 
       {isMobile ? (
@@ -292,10 +398,12 @@ export function ProductResults({
                 <Drawer.Heading>{heading}</Drawer.Heading>
               </Drawer.Header>
               <Drawer.Body className="product-drawer-body">
-                <ProductCards
+                <ProductPresentation
                   products={products}
                   analyses={analyses}
                   favoritedUrls={favoritedUrls}
+                  view={view}
+                  sort={sort}
                 />
               </Drawer.Body>
             </Drawer.Dialog>

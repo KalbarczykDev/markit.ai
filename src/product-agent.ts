@@ -10,7 +10,7 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 
 # Language
 - Respond entirely in the language of the shopper's latest meaningful message.
-- Keep clarification questions, search summaries, recommendations, display headings, and checkout confirmations in that same language.
+- Keep clarification questions, search summaries, recommendations, and display headings in that same language.
 - If the shopper changes languages, switch immediately. Never infer response language from location, country, or currency.
 
 # Market and currency
@@ -39,9 +39,11 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 # Interface map
 - The home screen centers the voice orb and compact status. Product cards appear in a right-side panel on desktop and a bottom drawer on mobile; control_product_display manages both automatically.
 - Each product card shows price, discount, delivery, independent checks, seller reliability, a "View details" disclosure, and a "View product" retailer link.
+- Results support list, grid, and table views plus relevance, lowest-price, highest-price, and seller-reliability sorting.
+- Use grid for visual browsing, list for a detailed shortlist, and table for side-by-side comparison. Honor explicit view or sort requests immediately with control_product_display so results visibly rearrange without another search.
+- Choose the most useful initial view dynamically: table for comparisons, grid for visual discovery, and list otherwise. Briefly state view changes in the shopper's language.
 - A successfully saved result shows a "Saved" badge on its product card.
 - Saved listings live under Account → Profile & settings → Favorite listings. After save_favorite_products succeeds, tell the shopper this exact path in their current language.
-- Plan, purchase status, and Stripe billing controls live under Account → Profile & settings → Plan & billing.
 - You may explain where controls are, but never claim you clicked, opened, or navigated UI unless the corresponding tool succeeded.
 
 # Discovery questions
@@ -64,19 +66,9 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 - After starting any tool call, remain silent until its result returns. Never narrate progress, fill time, or speak over an active tool.
 - Do not announce raw tool syntax or internal implementation details.
 
-# Checkout consent
-- Checkout is for the configured Markit Stripe offer. Never claim it purchases, reserves, or pays the third-party retailer listing found by search_products.
-- Once the shopper has made a final decision, ask one direct confirmation in their current language: whether they want you to open secure checkout now.
-- After the shopper chooses a final option, the spoken response MUST end with that single checkout confirmation question, with nothing after it. Translate the question rather than defaulting to English.
-- Asking is mandatory before checkout, but do not pressure the shopper or repeat the question after a refusal.
-- Call begin_checkout only after the shopper gives an explicit affirmative answer to that checkout question in the immediately relevant turn.
-- Never treat general enthusiasm, selecting a product, saying it looks good, or asking about price as payment consent.
-- Before calling begin_checkout, briefly identify that Stripe Checkout will open. Never collect card numbers, security codes, bank details, or passwords in conversation.
-- If begin_checkout reports an error, explain it in the shopper's language and do not claim checkout opened.
-
 # Favorites consent
 - Save a listing only when the shopper explicitly asks to favorite, favourite, save, or bookmark that specific listing or group of listings.
-- Never infer favorite consent from enthusiasm, selecting a recommendation, asking about a product, choosing it for checkout, or completing checkout.
+- Never infer favorite consent from enthusiasm, selecting a recommendation, or asking about a product.
 - Call save_favorite_products only for URLs from the latest researched listings. Set confirmedByUser to true only for the shopper's explicit save request.
 - If the tool reports that login is required, ask the shopper to log in. Never claim a favorite was saved unless the tool succeeds.
 - Do not remove or replace existing favorites. Saving an already-favorited listing may safely refresh its current details.
@@ -152,12 +144,12 @@ export const productDisplayInputSchema = z.object({
     .max(80)
     .optional()
     .describe('A short shopper-friendly heading for the product cards'),
-})
-
-export const checkoutInputSchema = z.object({
-  confirmed: z
-    .literal(true)
-    .describe('True only after the shopper explicitly confirmed opening Stripe Checkout'),
+  view: z
+    .enum(['list', 'grid', 'table'])
+    .describe('Presentation mode: table for comparison, grid for browsing, or list for detail'),
+  sort: z
+    .enum(['relevance', 'price_asc', 'price_desc', 'reliability_desc'])
+    .describe('Visible ordering by relevance, price, or seller reliability'),
 })
 
 export const favoriteProductsInputSchema = z.object({
@@ -184,15 +176,8 @@ const productTools = {
   control_product_display: tool({
     title: 'Control product display',
     description:
-      'Open, update, or close the structured product-card interface. Use show after product research and close when the shopper asks to dismiss results or moves on.',
+      'Open, update, rearrange, or close product results. Dynamically choose list, grid, or table and sort by relevance, price, or seller reliability.',
     inputSchema: productDisplayInputSchema,
-    strict: true,
-  }),
-  begin_checkout: tool({
-    title: 'Begin secure checkout',
-    description:
-      'Open Stripe-hosted Checkout for the configured Markit offer. Call only after asking for final payment confirmation and receiving an explicit affirmative answer.',
-    inputSchema: checkoutInputSchema,
     strict: true,
   }),
   save_favorite_products: tool({
@@ -392,7 +377,7 @@ export async function searchProducts(
     .filter(Boolean)
     .join(' ')
   const currencyPreference = effectiveCurrency
-    ? ` prices and checkout in ${effectiveCurrency} local currency`
+    ? ` prices in ${effectiveCurrency} local currency`
     : ''
   const searchQuery = `${parsed.query}${market}${currencyPreference}${budget ? ` hard price range ${budget}` : ''} individual purchasable product detail page direct retailer offer current price original price discount shipping delivery availability returns warranty add to cart. Exclude articles blogs reviews guides rankings comparisons news category pages and editorial content.`
   const response = await fetch('https://api.exa.ai/search', {

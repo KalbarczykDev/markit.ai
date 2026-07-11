@@ -1,10 +1,8 @@
 import handler from '@tanstack/react-start/server-entry'
 
-import { createAuth, handleAuthRequest } from './auth'
-import { handleBillingRequest, type BillingEnv } from './billing'
+import { createAuth, handleAuthRequest, type AuthEnv } from './auth'
 import { handleFavoritesRequest, saveFavoriteListings } from './favorites'
 import {
-  checkoutInputSchema,
   favoriteProductsInputSchema,
   getProductToolDefinitions,
   productSystemPromptForCountry,
@@ -13,14 +11,14 @@ import {
   searchProducts,
 } from './product-agent'
 import { analyzeProductListings } from './product-analysis'
-import type { ProductCardData } from './product-types'
+import type { ProductCardData, ProductSortMode } from './product-types'
 
 type ExecutionContext = {
   waitUntil(promise: Promise<unknown>): void
   passThroughOnException(): void
 }
 
-type Env = BillingEnv & {
+type Env = AuthEnv & {
   OPENAI_API_KEY?: string
   EXA_API_KEY?: string
 }
@@ -43,13 +41,28 @@ type RealtimeToolCall = {
 
 type ProductSessionState = {
   latestProducts: ProductCardData[]
+  visibleProductUrls: string[]
   analysisGeneration: number
 }
 
-type ShopperContext = { origin: string; cookie: string; userId: string | null }
+type ShopperContext = { userId: string | null }
 
 function sendJson(socket: WorkerWebSocket, value: unknown): void {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(value))
+}
+
+function sortProducts(products: ProductCardData[], sort: ProductSortMode): ProductCardData[] {
+  if (sort === 'relevance') return products
+  return [...products].sort((left, right) => {
+    if (sort === 'reliability_desc') {
+      return right.sellerReliability.score - left.sellerReliability.score
+    }
+    if (left.priceValue === undefined) return 1
+    if (right.priceValue === undefined) return -1
+    return sort === 'price_asc'
+      ? left.priceValue - right.priceValue
+      : right.priceValue - left.priceValue
+  })
 }
 
 async function executeAgentTool(
@@ -71,6 +84,7 @@ async function executeAgentTool(
       sendJson(client, { type: 'markit.status', status: 'searching', query: input.query })
       const result = await searchProducts(input, env.EXA_API_KEY)
       state.latestProducts = result.products
+      state.visibleProductUrls = []
       state.analysisGeneration += 1
       const generation = state.analysisGeneration
       if (env.OPENAI_API_KEY && result.products.length) {
@@ -95,39 +109,26 @@ async function executeAgentTool(
         sendJson(client, { type: 'markit.products', action: 'close' })
         output = { displayed: false, productCount: 0 }
       } else {
-        const requested = new Set(input.productUrls ?? [])
-        const products = (
+        const view = input.view
+        const sort = input.sort
+        const requested = new Set(input.productUrls ?? state.visibleProductUrls)
+        const products = sortProducts(
           requested.size
             ? state.latestProducts.filter((product) => requested.has(product.url))
-            : state.latestProducts
+            : state.latestProducts,
+          sort,
         ).slice(0, 6)
         if (!products.length) throw new Error('No researched products are available to display')
+        state.visibleProductUrls = products.map((product) => product.url)
         sendJson(client, {
           type: 'markit.products',
           action: 'show',
           heading: input.heading || 'Current picks',
           products,
+          view,
+          sort,
         })
-        output = { displayed: true, productCount: products.length }
-      }
-    } else if (call.name === 'begin_checkout') {
-      checkoutInputSchema.parse(JSON.parse(call.arguments || '{}'))
-      const checkoutResponse = await handleBillingRequest(
-        new Request(`${shopper.origin}/api/billing/checkout`, {
-          method: 'POST',
-          headers: { cookie: shopper.cookie, origin: shopper.origin },
-        }),
-        env,
-      )
-      const checkout = (await checkoutResponse.json()) as { url?: string; message?: string }
-      if (!checkoutResponse.ok || !checkout.url) {
-        output = {
-          error: checkout.message || 'Secure checkout could not be opened.',
-          checkoutOpened: false,
-        }
-      } else {
-        sendJson(client, { type: 'markit.checkout', url: checkout.url })
-        output = { checkoutOpened: true, destination: 'Stripe-hosted Checkout' }
+        output = { displayed: true, productCount: products.length, view, sort }
       }
     } else if (call.name === 'save_favorite_products') {
       const input = favoriteProductsInputSchema.parse(JSON.parse(call.arguments || '{}'))
@@ -219,7 +220,11 @@ async function realtimeSocket(
   const server = pair[1]
   server.accept()
   const handledToolCalls = new Set<string>()
-  const productState: ProductSessionState = { latestProducts: [], analysisGeneration: 0 }
+  const productState: ProductSessionState = {
+    latestProducts: [],
+    visibleProductUrls: [],
+    analysisGeneration: 0,
+  }
 
   server.addEventListener('message', (event) => {
     if (typeof event.data !== 'string') return
@@ -254,7 +259,6 @@ async function realtimeSocket(
         message.type === 'response.function_call_arguments.done' &&
         (message.name === 'search_products' ||
           message.name === 'control_product_display' ||
-          message.name === 'begin_checkout' ||
           message.name === 'save_favorite_products') &&
         message.call_id &&
         !handledToolCalls.has(message.call_id)
@@ -262,8 +266,6 @@ async function realtimeSocket(
         handledToolCalls.add(message.call_id)
         context.waitUntil(
           executeAgentTool(message, env, upstream, server, productState, context, {
-            origin,
-            cookie: request.headers.get('cookie') ?? '',
             userId: authSession?.user.id ?? null,
           }),
         )
@@ -292,7 +294,6 @@ export default {
     const url = new URL(request.url)
     if (url.pathname === '/api/realtime') return realtimeSocket(request, env, context)
     if (url.pathname.startsWith('/api/auth/')) return handleAuthRequest(request, env)
-    if (url.pathname.startsWith('/api/billing/')) return handleBillingRequest(request, env)
     if (url.pathname === '/api/favorites') return handleFavoritesRequest(request, env)
     return startFetch(request, env, context)
   },
