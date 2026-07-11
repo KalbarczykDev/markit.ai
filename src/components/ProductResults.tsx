@@ -21,11 +21,7 @@ function ProductCards({ products }: { products: ProductCardData[] }) {
   return (
     <div className="product-card-list">
       {products.map((product, index) => (
-        <Card
-          className="product-card"
-          variant={index === 0 ? 'secondary' : 'default'}
-          key={`${product.url}-${index}`}
-        >
+        <Card className="product-card" key={`${product.url}-${index}`}>
           <div className="product-image product-image-fallback" aria-hidden="true">
             {product.favicon ? (
               <img src={product.favicon} alt="" />

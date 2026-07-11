@@ -324,19 +324,16 @@ button {
   gap: 0 !important;
   overflow: hidden;
   padding: 0.55rem !important;
-  border: 1px solid rgba(39, 36, 56, 0.06);
-  border-radius: 1.2rem !important;
-  background: rgba(255, 255, 255, 0.84) !important;
-  box-shadow: 0 8px 24px rgba(58, 50, 92, 0.055);
+  border-radius: 1.1rem !important;
+  background: #fff !important;
+  box-shadow: var(--surface-shadow);
   transition:
-    border-color 180ms ease,
     box-shadow 180ms ease,
     transform 180ms ease;
 }
 
 .product-card:hover {
-  border-color: rgba(98, 76, 184, 0.16);
-  box-shadow: 0 14px 34px rgba(58, 50, 92, 0.1);
+  box-shadow: var(--overlay-shadow);
   transform: translateY(-1px);
 }
 
@@ -348,16 +345,14 @@ button {
   overflow: hidden;
   border-radius: 0.88rem;
   object-fit: cover;
-  background: #ece9f4;
+  background: #f2f1f4;
 }
 
 .product-image-fallback {
   display: grid;
   place-items: center;
-  color: rgba(67, 55, 116, 0.56);
-  background:
-    radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.9), transparent 34%),
-    linear-gradient(145deg, #e6e1fa, #dcecf5);
+  color: rgba(38, 37, 43, 0.4);
+  background: #f2f1f4;
   font-size: 1.45rem;
   font-weight: 650;
 }
@@ -410,7 +405,7 @@ button {
 
 .product-source-row strong {
   flex: none;
-  color: #5e48a4;
+  color: #1b1b1f;
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -448,11 +443,11 @@ button {
   min-width: 0;
   padding: 0.38rem 0.45rem;
   border-radius: 0.65rem;
-  background: rgba(91, 72, 160, 0.055);
+  background: rgba(24, 24, 27, 0.04);
 }
 
 .product-offer-details > div[data-verified='false'] {
-  background: rgba(60, 57, 68, 0.035);
+  background: rgba(24, 24, 27, 0.025);
 }
 
 .product-offer-details > div[data-verified='false'] p {
