@@ -64,8 +64,6 @@ type ProductSessionState = PersistedProductState & {
 type ShopperContext = { userId: string | null }
 type ConversationPersistence = { database: NonNullable<Env['DB']>; conversationId: string }
 
-const EXA_SEARCH_ENABLED = false
-
 function sendJson(socket: WorkerWebSocket, value: unknown): void {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(value))
 }
@@ -99,7 +97,6 @@ async function executeAgentTool(
   let output: unknown
   try {
     if (call.name === 'search_products') {
-      if (!EXA_SEARCH_ENABLED) throw new Error('Product search is temporarily disabled')
       if (!env.EXA_API_KEY) throw new Error('Product search is not configured')
       const input = productSearchInputSchema.parse(JSON.parse(call.arguments || '{}'))
       sendJson(client, { type: 'markit.status', status: 'searching', query: input.query })
@@ -287,9 +284,7 @@ async function realtimeSocket(
     return new Response('Voice service is not configured', { status: 503 })
   }
 
-  const toolDefinitions = (await getProductToolDefinitions()).filter(
-    (definition) => EXA_SEARCH_ENABLED || definition.name !== 'search_products',
-  )
+  const toolDefinitions = await getProductToolDefinitions()
   const auth = createAuth(request, env)
   const authSession = auth ? await auth.api.getSession({ headers: request.headers }) : null
   const requestedConversationId = new URL(request.url).searchParams.get('conversationId')
@@ -303,9 +298,6 @@ async function realtimeSocket(
   }
   const productSystemPrompt =
     productSystemPromptForCountry(request.headers.get('cf-ipcountry')) +
-    (EXA_SEARCH_ENABLED
-      ? ''
-      : '\n\n# Temporarily unavailable capabilities\n- Product search is disabled. Do not claim to search for, find, or verify new products. Tell the shopper that live product search is temporarily unavailable when requested.') +
     conversationHistoryPrompt(loadedConversation?.messages ?? [])
   const persistence: ConversationPersistence | null =
     loadedConversation && env.DB
