@@ -153,8 +153,8 @@ function ProductCards({
 }) {
   return (
     <div className="product-card-list" data-view={view}>
-      {products.map((product) => (
-        <Card className="product-card" key={product.url}>
+      {products.map((product, index) => (
+        <Card className="product-card" data-top-pick={index === 0 || undefined} key={product.url}>
           <div className="product-image product-image-fallback" aria-hidden="true">
             {product.favicon ? (
               <img src={product.favicon} alt="" />
@@ -179,6 +179,11 @@ function ProductCards({
               <div className="product-source-row">
                 <span>{product.source}</span>
                 <div className="product-source-meta">
+                  {index === 0 ? (
+                    <Chip color="accent" variant="soft" size="sm" className="product-top-pick">
+                      Top pick
+                    </Chip>
+                  ) : null}
                   {savedUrls.has(product.url) ? (
                     <Chip
                       color="success"
@@ -304,13 +309,16 @@ function ProductTable({
           </tr>
         </thead>
         <tbody>
-          {products.map((product) => (
-            <tr key={product.url}>
+          {products.map((product, index) => (
+            <tr data-top-pick={index === 0 || undefined} key={product.url}>
               <th scope="row">
                 <div className="product-table-name">
                   {product.image ? <img src={product.image} alt="" loading="lazy" /> : null}
                   <span>
                     <strong>{product.title}</strong>
+                    {index === 0 ? (
+                      <small className="product-top-pick-label">Top pick</small>
+                    ) : null}
                     {savedUrls.has(product.url) ? <small>✓ Saved</small> : null}
                   </span>
                 </div>

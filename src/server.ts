@@ -112,10 +112,15 @@ async function executeAgentTool(
         const view = input.view
         const sort = input.sort
         const requested = new Set(input.productUrls ?? state.visibleProductUrls)
+        const explicitlyOrdered = input.productUrls?.flatMap((url) => {
+          const product = state.latestProducts.find((candidate) => candidate.url === url)
+          return product ? [product] : []
+        })
         const products = sortProducts(
-          requested.size
-            ? state.latestProducts.filter((product) => requested.has(product.url))
-            : state.latestProducts,
+          explicitlyOrdered ??
+            (requested.size
+              ? state.latestProducts.filter((product) => requested.has(product.url))
+              : state.latestProducts),
           sort,
         ).slice(0, 6)
         if (!products.length) throw new Error('No researched products are available to display')
