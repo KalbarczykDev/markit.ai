@@ -1540,6 +1540,10 @@ body {
   line-height: 1;
 }
 
+:root[data-theme='light'] .profile-intro h1 {
+  color: oklch(0.145 0.02 129.55);
+}
+
 .profile-intro p {
   max-width: 35rem;
   margin: 0;
