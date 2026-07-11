@@ -1,6 +1,6 @@
 # markit.ai
 
-A realtime voice experience powered by OpenAI `gpt-realtime` over WebSockets.
+A realtime voice experience powered by OpenAI `gpt-realtime-2.1` over WebSockets.
 
 ## Development
 

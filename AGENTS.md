@@ -48,7 +48,7 @@ Use `bun oxlint --type-aware` as the source of truth for linting and type analys
 - Keep `resolve.dedupe: ['react', 'react-dom']` in Vite. A single React copy is required by React Aria overlays.
 - Use Tailwind v4 and the design tokens in `src/index.css`.
 - The interface is intentionally a single voice orb. Do not add visible navigation, copy, cards, or conventional controls unless explicitly requested.
-- Voice transport uses the same-origin `/api/realtime` WebSocket proxy to OpenAI's `gpt-realtime` model. Keep the API key server-side as the `OPENAI_API_KEY` Worker secret.
+- Voice transport uses the same-origin `/api/realtime` WebSocket proxy to OpenAI's `gpt-realtime-2.1` model. Keep the API key server-side as the `OPENAI_API_KEY` Worker secret.
 - Microphone audio is mono PCM16 at 24 kHz. Preserve server VAD, interruption handling, and streamed audio playback.
 - Keep secrets out of source, docs, Git, and command output. Local secrets belong in ignored `.env` or `.dev.vars` files; production secrets belong in Cloudflare Worker secrets.
 - Do not commit generated build output (`dist`) or dependencies (`node_modules`).

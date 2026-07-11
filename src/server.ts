@@ -18,7 +18,7 @@ const startFetch = handler.fetch as unknown as (
   context: ExecutionContext,
 ) => Promise<Response>
 
-function realtimeSocket(request: Request, env: Env): Response {
+async function realtimeSocket(request: Request, env: Env): Promise<Response> {
   if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') {
     return new Response('WebSocket upgrade required', { status: 426 })
   }
@@ -32,29 +32,28 @@ function realtimeSocket(request: Request, env: Env): Response {
     return new Response('Voice service is not configured', { status: 503 })
   }
 
+  const openAIResponse = (await fetch('https://api.openai.com/v1/realtime?model=gpt-realtime-2.1', {
+    headers: {
+      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      Upgrade: 'websocket',
+      'OpenAI-Safety-Identifier': 'markit-voice-web',
+    },
+  })) as Response & { webSocket?: WorkerWebSocket | null }
+  const upstream = openAIResponse.webSocket
+  if (openAIResponse.status !== 101 || !upstream) {
+    return new Response('Realtime upstream unavailable', { status: 502 })
+  }
+  upstream.accept()
+
   const Pair = globalThis.WebSocketPair as unknown as WebSocketPairConstructor
   const pair = new Pair()
   const client = pair[0]
   const server = pair[1]
   server.accept()
 
-  const upstream = new WebSocket('wss://api.openai.com/v1/realtime?model=gpt-realtime', [
-    'realtime',
-    `openai-insecure-api-key.${env.OPENAI_API_KEY}`,
-    'openai-beta.realtime-v1',
-  ])
-  const pending: string[] = []
-
   server.addEventListener('message', (event) => {
     if (typeof event.data !== 'string') return
     if (upstream.readyState === WebSocket.OPEN) upstream.send(event.data)
-    else if (upstream.readyState === WebSocket.CONNECTING && pending.length < 100) {
-      pending.push(event.data)
-    }
-  })
-
-  upstream.addEventListener('open', () => {
-    for (const message of pending.splice(0)) upstream.send(message)
   })
   upstream.addEventListener('message', (event) => {
     if (server.readyState === WebSocket.OPEN) server.send(event.data)

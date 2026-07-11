@@ -144,7 +144,8 @@ export function VoiceOrb() {
             type: 'session.update',
             session: {
               type: 'realtime',
-              model: 'gpt-realtime',
+              model: 'gpt-realtime-2.1',
+              reasoning: { effort: 'low' },
               instructions:
                 'You are Markit, a concise and warm voice assistant. Reply naturally and keep answers brief unless the user asks for detail.',
               output_modalities: ['audio'],
