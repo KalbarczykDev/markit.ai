@@ -1,6 +1,7 @@
 import { Button, Spinner } from '@heroui/react'
 import { useEffect, useRef, useState } from 'react'
 
+import type { FavoriteListing } from '@/favorite-types'
 import type { ProductAnalysis, ProductCardData } from '@/product-types'
 
 import { ProductResults } from './ProductResults'
@@ -41,6 +42,7 @@ type RealtimeMessage = {
   action?: 'show' | 'close'
   heading?: string
   products?: ProductCardData[]
+  favorites?: FavoriteListing[]
   url?: string
   analysis?: ProductAnalysis
   response?: { id?: string }
@@ -108,6 +110,7 @@ export function VoiceOrb() {
     products: ProductCardData[]
   }>({ isOpen: false, heading: 'Current picks', products: [] })
   const [analyses, setAnalyses] = useState<Record<string, ProductAnalysis>>({})
+  const [favoritedUrls, setFavoritedUrls] = useState<ReadonlySet<string>>(new Set())
   const socketRef = useRef<WebSocket | null>(null)
   const audioRef = useRef<AudioRuntime | null>(null)
   const orbRef = useRef<HTMLButtonElement>(null)
@@ -365,6 +368,12 @@ export function VoiceOrb() {
           if (url && analysis) {
             setAnalyses((previous) => ({ ...previous, [url]: analysis }))
           }
+        } else if (message.type === 'markit.favorites' && message.favorites?.length) {
+          setFavoritedUrls((previous) => {
+            const updated = new Set(previous)
+            for (const favorite of message.favorites ?? []) updated.add(favorite.url)
+            return updated
+          })
         } else if (message.type === 'markit.checkout' && message.url) {
           try {
             const checkoutUrl = new URL(message.url)
@@ -464,6 +473,7 @@ export function VoiceOrb() {
         heading={productDisplay.heading}
         products={productDisplay.products}
         analyses={analyses}
+        favoritedUrls={favoritedUrls}
       />
     </div>
   )

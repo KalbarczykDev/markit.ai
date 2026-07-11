@@ -443,16 +443,15 @@ button {
   box-shadow:
     0 1px 2px oklch(0.2 0.02 130 / 0.07),
     0 14px 34px oklch(0.2 0.02 130 / 0.11);
-  transition:
-    box-shadow 180ms ease,
-    transform 180ms ease;
+  transform: none !important;
+  transition: box-shadow 180ms ease;
 }
 
 .product-card:hover {
   box-shadow:
     0 2px 6px oklch(0.2 0.02 130 / 0.09),
     0 22px 48px oklch(0.2 0.02 130 / 0.16);
-  transform: translateY(-1px);
+  transform: none !important;
 }
 
 .product-image {
@@ -521,6 +520,29 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.product-source-row > span {
+  min-width: 0;
+}
+
+.product-source-meta {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.product-saved-indicator {
+  min-height: 1.35rem !important;
+  color: var(--success-foreground, var(--foreground)) !important;
+  font-size: 0.58rem !important;
+  font-weight: 700 !important;
+  animation: saved-reveal 260ms ease-out;
+}
+
+.product-saved-indicator span {
+  overflow: visible;
 }
 
 .product-source-row strong {
@@ -865,6 +887,13 @@ button {
   }
 }
 
+@keyframes saved-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
 @keyframes drift {
   to {
     transform: rotate(1turn);
@@ -923,7 +952,8 @@ button {
   .orb-halo,
   .orb-shell,
   .orb-shell::before,
-  .product-analysis[data-state='pending'] small {
+  .product-analysis[data-state='pending'] small,
+  .product-saved-indicator {
     animation: none !important;
   }
 }

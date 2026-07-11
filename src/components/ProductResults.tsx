@@ -1,4 +1,4 @@
-import { Card, Disclosure, Drawer, Link, Meter } from '@heroui/react'
+import { Card, Chip, Disclosure, Drawer, Link, Meter } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
 import type { ProductAnalysis, ProductCardData } from '@/product-types'
@@ -137,9 +137,11 @@ function AnalysisChecks({ analysis }: { analysis: ProductAnalysis | undefined })
 function ProductCards({
   products,
   analyses,
+  favoritedUrls,
 }: {
   products: ProductCardData[]
   analyses: Record<string, ProductAnalysis>
+  favoritedUrls: ReadonlySet<string>
 }) {
   return (
     <div className="product-card-list">
@@ -168,7 +170,19 @@ function ProductCards({
             <Card.Header className="product-card-header">
               <div className="product-source-row">
                 <span>{product.source}</span>
-                {product.price ? <strong>{product.price}</strong> : null}
+                <div className="product-source-meta">
+                  {favoritedUrls.has(product.url) ? (
+                    <Chip
+                      color="success"
+                      variant="soft"
+                      size="sm"
+                      className="product-saved-indicator"
+                    >
+                      <span aria-hidden="true">✓</span> Saved
+                    </Chip>
+                  ) : null}
+                  {product.price ? <strong>{product.price}</strong> : null}
+                </div>
               </div>
               <Card.Title className="product-title">{product.title}</Card.Title>
               {product.highlights[0] ? (
@@ -231,11 +245,13 @@ export function ProductResults({
   heading,
   products,
   analyses,
+  favoritedUrls,
 }: {
   isOpen: boolean
   heading: string
   products: ProductCardData[]
   analyses: Record<string, ProductAnalysis>
+  favoritedUrls: ReadonlySet<string>
 }) {
   const isMobile = useIsMobile()
   const hasProducts = isOpen && products.length > 0
@@ -250,7 +266,7 @@ export function ProductResults({
           </div>
           <small>{products.length} results</small>
         </div>
-        <ProductCards products={products} analyses={analyses} />
+        <ProductCards products={products} analyses={analyses} favoritedUrls={favoritedUrls} />
       </aside>
 
       {isMobile ? (
@@ -263,7 +279,11 @@ export function ProductResults({
                 <Drawer.Heading>{heading}</Drawer.Heading>
               </Drawer.Header>
               <Drawer.Body className="product-drawer-body">
-                <ProductCards products={products} analyses={analyses} />
+                <ProductCards
+                  products={products}
+                  analyses={analyses}
+                  favoritedUrls={favoritedUrls}
+                />
               </Drawer.Body>
             </Drawer.Dialog>
           </Drawer.Content>
