@@ -299,7 +299,7 @@ export function VoiceOrb() {
                   format: { type: 'audio/pcm', rate: INPUT_RATE },
                   turn_detection: {
                     type: 'semantic_vad',
-                    eagerness: 'low',
+                    eagerness: 'high',
                     create_response: true,
                     interrupt_response: true,
                   },

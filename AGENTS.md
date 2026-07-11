@@ -74,10 +74,4 @@ The Worker is named `markit-ai` and configured in `wrangler.toml`. `bun run buil
 
 GitHub Actions requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. Runtime secrets such as `OPENAI_API_KEY` and `EXA_API_KEY` remain Worker secrets and are preserved across deployments. Never write credential values into tracked files or workflow YAML.
 
-When a task includes deployment and `bun run verify` is green, commit and push only the files changed for the task. The push deploys automatically; verify the workflow and live URL when deployment behavior changes or a failure is reported.
-
-## UI work
-
-For any task that designs, implements, or reviews frontend UI, read and follow [`skills/refine-ui/SKILL.md`](skills/refine-ui/SKILL.md) before making changes. Use its review checklist before handoff.
-
-Keep the licensed Refactoring UI source files in `/Users/oskalbarczyk/Downloads/Refactoring_UI`; never copy or commit the full source materials into this repository.
+After every completed change, run `bun run verify`, commit only the files changed for the task, and push the commit. Do not wait for the user to request deployment. The push deploys automatically; verify the workflow and live URL when deployment behavior changes or a failure is reported.
