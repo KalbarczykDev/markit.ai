@@ -49,7 +49,8 @@ Use `bun oxlint --type-aware` as the source of truth for linting and type analys
 - Use Tailwind v4 and the design tokens in `src/index.css`.
 - The interface is intentionally a single voice orb. Do not add visible navigation, copy, cards, or conventional controls unless explicitly requested.
 - Voice transport uses the same-origin `/api/realtime` WebSocket proxy to OpenAI's `gpt-realtime-2.1` model. Keep the API key server-side as the `OPENAI_API_KEY` Worker secret.
-- Microphone audio is mono PCM16 at 24 kHz. Preserve server VAD, interruption handling, and streamed audio playback.
+- Microphone audio is mono PCM16 at 24 kHz. Use semantic VAD with automatic response creation and interruption enabled.
+- WebSocket playback is client-managed. On `input_audio_buffer.speech_started`, stop every queued audio source immediately and send `conversation.item.truncate` with the played duration. Ignore late deltas from interrupted responses, and never allow two response queues to play concurrently.
 - Keep secrets out of source, docs, Git, and command output. Local secrets belong in ignored `.env` or `.dev.vars` files; production secrets belong in Cloudflare Worker secrets.
 - Do not commit generated build output (`dist`) or dependencies (`node_modules`).
 

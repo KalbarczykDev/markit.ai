@@ -10,6 +10,22 @@ type AudioRuntime = {
   silentGain: GainNode
 }
 
+type ActiveOutput = {
+  itemId: string
+  responseId: string
+  contentIndex: number
+  startedAt: number
+}
+
+type RealtimeMessage = {
+  type?: string
+  delta?: string
+  item_id?: string
+  response_id?: string
+  content_index?: number
+  response?: { id?: string }
+}
+
 const INPUT_RATE = 24_000
 
 function floatToPcm16(input: Float32Array): Int16Array {
@@ -59,15 +75,54 @@ export function VoiceOrb() {
   const orbRef = useRef<HTMLButtonElement>(null)
   const playbackContextRef = useRef<AudioContext | null>(null)
   const playbackAtRef = useRef(0)
+  const playbackSourcesRef = useRef(new Set<AudioBufferSourceNode>())
+  const playbackGenerationRef = useRef(0)
+  const activeOutputRef = useRef<ActiveOutput | null>(null)
+  const activeResponseRef = useRef<string | null>(null)
+  const interruptedResponsesRef = useRef(new Set<string>())
+  const runningRef = useRef(false)
+  const mountedRef = useRef(true)
 
   const setLevel = (level: number) => {
     orbRef.current?.style.setProperty('--level', String(Math.min(1, level)))
   }
 
-  const stop = () => {
-    socketRef.current?.close()
+  const haltPlayback = (socket?: WebSocket, truncate = false) => {
+    const context = playbackContextRef.current
+    const output = activeOutputRef.current
+    if (truncate && context && output && socket?.readyState === WebSocket.OPEN) {
+      const audioEndMs = Math.max(0, Math.round((context.currentTime - output.startedAt) * 1000))
+      socket.send(
+        JSON.stringify({
+          type: 'conversation.item.truncate',
+          item_id: output.itemId,
+          content_index: output.contentIndex,
+          audio_end_ms: audioEndMs,
+        }),
+      )
+    }
+
+    playbackGenerationRef.current += 1
+    for (const source of playbackSourcesRef.current) {
+      try {
+        source.stop()
+      } catch {}
+      source.disconnect()
+    }
+    playbackSourcesRef.current.clear()
+    playbackAtRef.current = context?.currentTime ?? 0
+    activeOutputRef.current = null
+    setLevel(0.08)
+  }
+
+  const shutdown = (updateState = true) => {
+    runningRef.current = false
+    const socket = socketRef.current
     socketRef.current = null
+    socket?.close()
+
     const audio = audioRef.current
+    audioRef.current = null
     if (audio) {
       audio.processor.disconnect()
       audio.source.disconnect()
@@ -75,20 +130,38 @@ export function VoiceOrb() {
       for (const track of audio.stream.getTracks()) track.stop()
       void audio.context.close()
     }
-    audioRef.current = null
+
+    haltPlayback()
     if (playbackContextRef.current) void playbackContextRef.current.close()
     playbackContextRef.current = null
     playbackAtRef.current = 0
+    activeResponseRef.current = null
+    interruptedResponsesRef.current.clear()
     setLevel(0)
-    setState('idle')
+    if (updateState && mountedRef.current) setState('idle')
   }
 
-  useEffect(() => stop, [])
+  useEffect(
+    () => () => {
+      mountedRef.current = false
+      shutdown(false)
+    },
+    [],
+  )
 
-  const playAudio = (base64: string) => {
+  const playAudio = (base64: string, output: Omit<ActiveOutput, 'startedAt'>) => {
     const pcm = base64ToPcm(base64)
-    const context = playbackContextRef.current ?? new AudioContext({ sampleRate: INPUT_RATE })
-    playbackContextRef.current = context
+    const context = playbackContextRef.current
+    if (!context || !pcm.length) return
+
+    const currentOutput = activeOutputRef.current
+    if (
+      currentOutput &&
+      (currentOutput.itemId !== output.itemId || currentOutput.responseId !== output.responseId)
+    ) {
+      haltPlayback()
+    }
+
     const buffer = context.createBuffer(1, pcm.length, INPUT_RATE)
     const channel = buffer.getChannelData(0)
     let peak = 0
@@ -96,34 +169,67 @@ export function VoiceOrb() {
       channel[index] = (pcm[index] ?? 0) / 0x8000
       peak = Math.max(peak, Math.abs(channel[index] ?? 0))
     }
+
     const source = context.createBufferSource()
     source.buffer = buffer
     source.connect(context.destination)
     const startsAt = Math.max(context.currentTime, playbackAtRef.current)
+    if (!activeOutputRef.current) activeOutputRef.current = { ...output, startedAt: startsAt }
+    const generation = playbackGenerationRef.current
+    playbackSourcesRef.current.add(source)
     source.start(startsAt)
     playbackAtRef.current = startsAt + buffer.duration
     setLevel(Math.max(0.16, peak))
+
     source.addEventListener('ended', () => {
-      if (context.currentTime >= playbackAtRef.current - 0.04) {
+      source.disconnect()
+      playbackSourcesRef.current.delete(source)
+      if (
+        generation === playbackGenerationRef.current &&
+        playbackSourcesRef.current.size === 0 &&
+        context.currentTime >= playbackAtRef.current - 0.04
+      ) {
+        activeOutputRef.current = null
         setLevel(0.08)
-        setState('listening')
+        if (runningRef.current) setState('listening')
       }
     })
   }
 
   const start = async () => {
-    if (state !== 'idle' && state !== 'error') {
-      stop()
+    if (runningRef.current) {
+      shutdown()
       return
     }
 
+    runningRef.current = true
     setState('connecting')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       })
+      if (!runningRef.current) {
+        for (const track of stream.getTracks()) track.stop()
+        return
+      }
+
       const context = new AudioContext()
-      await context.resume()
+      const playbackContext = new AudioContext({ sampleRate: INPUT_RATE })
+      await Promise.all([context.resume(), playbackContext.resume()])
+      if (!runningRef.current) {
+        for (const track of stream.getTracks()) track.stop()
+        void context.close()
+        void playbackContext.close()
+        return
+      }
+      playbackContextRef.current = playbackContext
+      playbackAtRef.current = playbackContext.currentTime
+
       const source = context.createMediaStreamSource(stream)
       const processor = context.createScriptProcessor(4096, 1, 1)
       const silentGain = context.createGain()
@@ -138,6 +244,7 @@ export function VoiceOrb() {
       socketRef.current = socket
 
       socket.addEventListener('open', () => {
+        if (!runningRef.current || socketRef.current !== socket) return
         setState('listening')
         socket.send(
           JSON.stringify({
@@ -153,7 +260,8 @@ export function VoiceOrb() {
                 input: {
                   format: { type: 'audio/pcm', rate: INPUT_RATE },
                   turn_detection: {
-                    type: 'server_vad',
+                    type: 'semantic_vad',
+                    eagerness: 'low',
                     create_response: true,
                     interrupt_response: true,
                   },
@@ -166,35 +274,59 @@ export function VoiceOrb() {
       })
 
       socket.addEventListener('message', (event) => {
-        if (typeof event.data !== 'string') return
-        const message = JSON.parse(event.data) as { type?: string; delta?: string }
-        if (
-          message.type === 'response.output_audio.delta' ||
-          message.type === 'response.audio.delta'
-        ) {
-          if (message.delta) {
+        if (typeof event.data !== 'string' || socketRef.current !== socket) return
+        const message = JSON.parse(event.data) as RealtimeMessage
+
+        if (message.type === 'response.created') {
+          const responseId = message.response?.id
+          if (responseId && activeResponseRef.current && activeResponseRef.current !== responseId) {
+            haltPlayback()
+          }
+          activeResponseRef.current = responseId ?? null
+        } else if (message.type === 'response.output_audio.delta') {
+          if (
+            message.delta &&
+            message.item_id &&
+            message.response_id &&
+            !interruptedResponsesRef.current.has(message.response_id)
+          ) {
             setState('speaking')
-            playAudio(message.delta)
+            playAudio(message.delta, {
+              itemId: message.item_id,
+              responseId: message.response_id,
+              contentIndex: message.content_index ?? 0,
+            })
           }
         } else if (message.type === 'input_audio_buffer.speech_started') {
+          const responseId = activeOutputRef.current?.responseId ?? activeResponseRef.current
+          if (responseId) interruptedResponsesRef.current.add(responseId)
+          haltPlayback(socket, true)
           setState('listening')
-          playbackAtRef.current = 0
+        } else if (message.type === 'response.done') {
+          const responseId = message.response?.id
+          if (responseId) interruptedResponsesRef.current.delete(responseId)
+          if (!responseId || activeResponseRef.current === responseId) {
+            activeResponseRef.current = null
+          }
         } else if (message.type === 'error') {
           setState('error')
         }
       })
 
       socket.addEventListener('close', () => {
-        if (socketRef.current === socket) setState('error')
+        if (socketRef.current === socket && runningRef.current) setState('error')
       })
-      socket.addEventListener('error', () => setState('error'))
+      socket.addEventListener('error', () => {
+        if (socketRef.current === socket && runningRef.current) setState('error')
+      })
 
       processor.addEventListener('audioprocess', (event) => {
+        if (!runningRef.current || socketRef.current !== socket) return
         const input = event.inputBuffer.getChannelData(0)
         let sum = 0
         for (const sample of input) sum += sample * sample
         const level = Math.sqrt(sum / input.length)
-        setLevel(Math.min(1, level * 7))
+        if (playbackSourcesRef.current.size === 0) setLevel(Math.min(1, level * 7))
         if (socket.readyState !== WebSocket.OPEN) return
         const pcm = floatToPcm16(resample(input, context.sampleRate))
         socket.send(
@@ -205,8 +337,8 @@ export function VoiceOrb() {
         )
       })
     } catch {
-      stop()
-      setState('error')
+      shutdown(false)
+      if (mountedRef.current) setState('error')
     }
   }
 
