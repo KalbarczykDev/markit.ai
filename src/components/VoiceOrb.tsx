@@ -53,6 +53,8 @@ type VoiceOrbProps = {
   onConversationUpdated: () => void
 }
 
+const MAX_USER_TURN_MS = 5_000
+
 export function VoiceOrb({ conversationId, onConversationUpdated }: VoiceOrbProps) {
   const [state, setState] = useState<OrbState>('idle')
   const [isMuted, setIsMuted] = useState(false)
@@ -81,6 +83,29 @@ export function VoiceOrb({ conversationId, onConversationUpdated }: VoiceOrbProp
   const runningRef = useRef(false)
   const mutedRef = useRef(false)
   const mountedRef = useRef(true)
+  const turnDeadlineRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const turnResponseRequestedRef = useRef(false)
+
+  const clearTurnDeadline = () => {
+    if (turnDeadlineRef.current) clearTimeout(turnDeadlineRef.current)
+    turnDeadlineRef.current = null
+  }
+
+  const requestTurnResponse = (socket: WebSocket, commitAudio: boolean) => {
+    if (
+      turnResponseRequestedRef.current ||
+      socket.readyState !== WebSocket.OPEN ||
+      toolActiveRef.current ||
+      pendingToolCallRef.current
+    ) {
+      return
+    }
+    turnResponseRequestedRef.current = true
+    clearTurnDeadline()
+    if (commitAudio) socket.send(JSON.stringify({ type: 'input_audio_buffer.commit' }))
+    socket.send(JSON.stringify({ type: 'response.create' }))
+    setState('thinking')
+  }
 
   const setLevel = (level: number) => {
     orbRef.current?.style.setProperty('--level', String(Math.min(1, level)))
@@ -148,6 +173,8 @@ export function VoiceOrb({ conversationId, onConversationUpdated }: VoiceOrbProp
     toolActiveRef.current = false
     pendingToolCallRef.current = null
     sessionReadyRef.current = false
+    clearTurnDeadline()
+    turnResponseRequestedRef.current = false
     setLevel(0)
     if (updateState && mountedRef.current) {
       setProductDisplay({
@@ -288,7 +315,7 @@ export function VoiceOrb({ conversationId, onConversationUpdated }: VoiceOrbProp
                     threshold: 0.55,
                     prefix_padding_ms: 300,
                     silence_duration_ms: 500,
-                    create_response: true,
+                    create_response: false,
                     interrupt_response: true,
                   },
                 },
@@ -307,6 +334,8 @@ export function VoiceOrb({ conversationId, onConversationUpdated }: VoiceOrbProp
           sessionReadyRef.current = true
           setState('listening')
         } else if (message.type === 'response.created') {
+          clearTurnDeadline()
+          turnResponseRequestedRef.current = true
           const responseId = message.response?.id
           if (responseId && activeResponseRef.current && activeResponseRef.current !== responseId) {
             haltPlayback()
@@ -330,12 +359,19 @@ export function VoiceOrb({ conversationId, onConversationUpdated }: VoiceOrbProp
           }
         } else if (message.type === 'input_audio_buffer.speech_started') {
           if (toolActiveRef.current || pendingToolCallRef.current) return
+          clearTurnDeadline()
+          turnResponseRequestedRef.current = false
+          turnDeadlineRef.current = setTimeout(
+            () => requestTurnResponse(socket, true),
+            MAX_USER_TURN_MS,
+          )
           const responseId = activeOutputRef.current?.responseId ?? activeResponseRef.current
           if (responseId) interruptedResponsesRef.current.add(responseId)
           haltPlayback(socket, true)
           if (!toolActiveRef.current) setState('listening')
         } else if (message.type === 'input_audio_buffer.speech_stopped') {
-          if (!toolActiveRef.current) setState('thinking')
+          clearTurnDeadline()
+          requestTurnResponse(socket, false)
         } else if (message.type === 'markit.status') {
           if (message.status === 'searching') setState('searching')
           else if (message.status === 'validating') setState('validating')
@@ -399,6 +435,7 @@ export function VoiceOrb({ conversationId, onConversationUpdated }: VoiceOrbProp
           if (!responseId || activeResponseRef.current === responseId) {
             activeResponseRef.current = null
           }
+          turnResponseRequestedRef.current = false
         } else if (message.type === 'error') {
           setState('error')
         }
@@ -446,6 +483,8 @@ export function VoiceOrb({ conversationId, onConversationUpdated }: VoiceOrbProp
     setIsMuted(nextMuted)
     for (const track of audioRef.current?.stream.getAudioTracks() ?? []) track.enabled = !nextMuted
     if (nextMuted) {
+      clearTurnDeadline()
+      turnResponseRequestedRef.current = false
       setLevel(0.08)
       if (socketRef.current?.readyState === WebSocket.OPEN) {
         socketRef.current.send(JSON.stringify({ type: 'input_audio_buffer.clear' }))
