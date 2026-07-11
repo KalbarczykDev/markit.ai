@@ -120,14 +120,117 @@ button {
   /* Reserve room for the fixed account bar; the agent sizes itself from these. */
   --stage-top: 6rem;
   --stage-pad: 2rem;
+  --sidebar-space: 14.5rem;
   display: grid;
   width: 100%;
   min-height: 100svh;
   place-items: center;
   overflow: hidden;
-  padding: var(--stage-top) var(--stage-pad) var(--stage-pad);
+  padding: var(--stage-top) var(--stage-pad) var(--stage-pad)
+    calc(var(--stage-pad) + var(--sidebar-space));
   background:
     radial-gradient(circle at 50% 46%, var(--page-glow), transparent 34rem), var(--background);
+}
+
+.main-sidebar {
+  position: fixed;
+  z-index: 40;
+  top: 5.4rem;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  display: flex;
+  width: 12.5rem;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 1.3rem;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(20px);
+}
+
+.main-sidebar-nav {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.main-sidebar-label {
+  padding: 0.55rem 0.65rem 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-link {
+  width: 100%;
+  min-height: 2.65rem !important;
+  justify-content: flex-start !important;
+  gap: 0.7rem !important;
+  padding-inline: 0.65rem !important;
+  border-radius: 0.85rem !important;
+  color: var(--text-secondary) !important;
+  font-size: 0.72rem !important;
+  font-weight: 650 !important;
+}
+
+.sidebar-link:hover {
+  color: var(--foreground) !important;
+  background: var(--surface-secondary) !important;
+}
+
+.sidebar-link.is-active {
+  color: var(--accent-soft-foreground) !important;
+  background: var(--accent-soft) !important;
+}
+
+.sidebar-link-icon {
+  display: grid;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
+  place-items: center;
+}
+
+.sidebar-link-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sidebar-note {
+  display: flex;
+  align-items: start;
+  gap: 0.55rem;
+  padding: 0.8rem 0.65rem;
+  border-radius: 0.9rem;
+  background: var(--surface-secondary);
+}
+
+.sidebar-note-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  flex: none;
+  margin-top: 0.22rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0.2rem var(--accent-soft);
+}
+
+.sidebar-note div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.sidebar-note strong {
+  font-size: 0.66rem;
+}
+
+.sidebar-note div span {
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  line-height: 1.4;
 }
 
 .commerce-agent {
@@ -1068,9 +1171,37 @@ button {
   }
 }
 
+@media (min-width: 900px) and (max-width: 1199px) {
+  .voice-stage {
+    --sidebar-space: 5.5rem;
+  }
+
+  .main-sidebar {
+    left: 1rem;
+    width: 4rem;
+  }
+
+  .main-sidebar-label,
+  .sidebar-link > span:last-child,
+  .sidebar-note {
+    display: none;
+  }
+
+  .sidebar-link {
+    justify-content: center !important;
+    padding-inline: 0 !important;
+  }
+}
+
 @media (max-width: 899px) {
   .voice-stage {
     --stage-pad: 1rem;
+    --sidebar-space: 0rem;
+    padding-left: var(--stage-pad);
+  }
+
+  .main-sidebar {
+    display: none;
   }
 
   .commerce-agent,
