@@ -7,10 +7,22 @@ export type ProductCheck = {
   note: string
 }
 
+export type ProductDecision =
+  | 'ask_user'
+  | 'reject'
+  | 'present_match'
+  | 'wait_and_monitor'
+  | 'propose_alternatives'
+
 export type ProductAnalysis = {
   status: 'complete' | 'failed'
   model: string
+  decision?: ProductDecision
+  decisionReason?: string
   summary?: string
+  allInCost?: { value: number | null; currency: string | null; reliable: boolean }
+  missingInformation?: string[]
+  sources?: { title: string; url: string }[]
   checks: ProductCheck[]
 }
 

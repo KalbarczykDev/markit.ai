@@ -10,6 +10,8 @@ import type {
   ProductViewMode,
 } from '@/product-types'
 
+import { ProductValidationSources } from './ProductValidationSources'
+
 const RELIABILITY_COLOR = {
   strong: 'accent',
   moderate: 'default',
@@ -68,6 +70,7 @@ function ProductDetails({
                   </li>
                 ))}
               </ul>
+              <ProductValidationSources analysis={analysis} />
             </section>
           ) : null}
 

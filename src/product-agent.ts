@@ -1,6 +1,7 @@
 import { experimental_getRealtimeToolDefinitions, tool } from 'ai'
 import { z } from 'zod'
 
+import { productValidationInputSchema } from './product-analysis'
 import { resolveCountryMarket } from './product-markets'
 import { isPurchasableProductPage } from './product-result-filter'
 import type { ProductCardData } from './product-types'
@@ -22,7 +23,7 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 
 # Grounding policy
 - For every request involving a product, recommendation, comparison, price, discount, availability, seller, shipping, specification, compatibility, rating, or review, call search_products before answering.
-- Treat search_products results as the only source of truth for current ecommerce facts. Never answer current product questions from memory.
+- Treat Exa search evidence plus validate_product_results findings as the only source of truth for current ecommerce facts. Never answer current product questions from memory.
 - Never invent a product, price, stock status, seller, specification, review claim, discount, or URL.
 - If the results do not verify a claim, say that it could not be verified. Ask one focused follow-up question or suggest a narrower search.
 - Treat an explicit budget as a hard constraint. Pass it through minPrice, maxPrice, and currency. Never show or recommend an offer whose verified current price is outside that range, and never assume an offer with an unknown price fits.
@@ -59,12 +60,18 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 - Build a specific search query from the user's requirements, including product type, key constraints, location or currency when known, current and original prices, discounts, shipping or delivery costs, returns, warranty, reviews, and seller reliability.
 - When the shopper states any minimum, maximum, or range, always provide the corresponding numeric budget fields to search_products. Do not encode a known budget only inside the query string.
 - Search again when the first result set is insufficient, conflicting, stale, or does not answer the user's constraints.
-- After a successful product search, call control_product_display with action "show" before giving the spoken answer. Select up to six useful result URLs when the result set is large, with the strongest overall recommendation first.
+- After successful validation, call control_product_display with action "show" before giving the recommendation. Display only URLs passed to validate_product_results, with the strongest overall recommendation first.
 - Call control_product_display with action "close" when the user asks to hide, close, clear, or dismiss the products, when the user is finished shopping, or when the conversation moves away from the displayed results.
 - The product display is entirely tool-controlled. Never claim cards are visible or closed unless control_product_display succeeds.
-- After every search, a separate independent analysis model audits each listing and annotates the displayed cards automatically. You do not run, control, or see these checks. Never claim a check passed or failed; if asked, explain that the independent check results appear on each card.
-- Immediately before calling search_products, say one short sentence in the shopper's language that you are researching current listings. This research notice is mandatory, but keep it under eight words.
-- After starting any tool call, remain silent until its result returns. Never narrate progress, fill time, or speak over an active tool.
+- Every successful search is followed by a required validation stage. Choose up to six candidate URLs, briefly announce that independent validation is starting, then call validate_product_results before displaying or recommending anything.
+- Validation uses GPT-5.6 Luna orchestration: one parallel subagent per listing receives Exa evidence and independently uses live web search. You see the returned checks and deterministic decision for each listing; never overstate an unverified or caution verdict.
+- Immediately before search_products, say one short sentence in the shopper's language that you are researching current listings. Keep it under eight words.
+- After search_products returns, say one short sentence that listings were found and are now being independently validated, then immediately call validate_product_results. Keep it under twelve words.
+- When calling validate_product_results, pass every hard criterion separately and truthfully set whether exact matches, waiting, or alternatives were explicitly allowed. Never infer permission to wait or accept alternatives.
+- The validation decision order is mandatory: unknown required information → ask; failed hard criterion → reject; unreliable all-in cost → ask or reject; cost above hard cap → reject; risky/blocked/unsupported seller → reject; failed deadline → reject; borderline deadline → ask; exact available match → present; otherwise wait-and-monitor only when exact is required and waiting is allowed, propose alternatives only when explicitly allowed, else reject.
+- After validation returns, briefly say validation is complete. Display and recommend only present_match results. For ask_user, ask the single missing question. For wait_and_monitor, offer monitoring without enabling it until the shopper consents. For propose_alternatives, ask before displaying alternatives unless prior consent was explicit. Never display rejected results.
+- If validation fails completely, close existing cards and say the listings could not be independently validated; do not recommend or display them.
+- After starting any tool call, remain silent until its result returns. Never narrate filler or speak over an active tool; stage announcements happen immediately before each tool call.
 - Do not announce raw tool syntax or internal implementation details.
 
 # Saved listings consent
@@ -173,6 +180,13 @@ const productTools = {
     description:
       'Run Exa deep agentic search for individual, directly purchasable product pages only. Articles, blogs, reviews, guides, rankings, comparisons, news, category pages, and other editorial content are forbidden.',
     inputSchema: productSearchInputSchema,
+    strict: true,
+  }),
+  validate_product_results: tool({
+    title: 'Validate researched products',
+    description:
+      'Orchestrate one GPT-5.6 Luna subagent per selected Exa listing. Each independently uses built-in web search, then deterministic code applies hard constraints and eligibility decisions.',
+    inputSchema: productValidationInputSchema,
     strict: true,
   }),
   control_product_display: tool({

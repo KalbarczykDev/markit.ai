@@ -1183,6 +1183,54 @@ button {
   font-weight: 650;
 }
 
+.product-validation-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+  padding-top: 0.35rem;
+  font-size: 0.62rem;
+}
+
+.product-validation-sources > span {
+  width: 100%;
+  color: var(--text-muted);
+  font-weight: 650;
+}
+
+.product-validation-sources p {
+  width: 100%;
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.product-validation-sources p strong {
+  color: var(--foreground);
+}
+
+.product-validation-sources p[data-decision='reject'] strong {
+  color: var(--danger);
+}
+
+.product-validation-sources p[data-decision='ask_user'] strong,
+.product-validation-sources p[data-decision='wait_and_monitor'] strong {
+  color: var(--warning);
+}
+
+.product-validation-sources a {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.product-validation-sources a svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: none;
+}
+
 .product-details-meta {
   margin: 0;
   color: var(--text-muted);

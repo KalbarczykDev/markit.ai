@@ -6,8 +6,10 @@ export type OrbState =
   | 'listening'
   | 'thinking'
   | 'searching'
+  | 'validating'
   | 'speaking'
   | 'search-error'
+  | 'validation-error'
   | 'error'
 
 const STATUS_LABELS: Record<OrbState, string> = {
@@ -16,13 +18,19 @@ const STATUS_LABELS: Record<OrbState, string> = {
   listening: 'Listening',
   thinking: 'Checking product data',
   searching: 'Researching products',
+  validating: 'Validating with independent agents',
   speaking: 'Speaking',
   'search-error': 'Search unavailable',
+  'validation-error': 'Validation unavailable',
   error: 'Connection unavailable',
 }
 
 export function VoiceStatus({ state }: { state: OrbState }) {
-  const isPending = state === 'connecting' || state === 'thinking' || state === 'searching'
+  const isPending =
+    state === 'connecting' ||
+    state === 'thinking' ||
+    state === 'searching' ||
+    state === 'validating'
 
   return (
     <div className="agent-status" data-state={state} role="status" aria-live="polite">

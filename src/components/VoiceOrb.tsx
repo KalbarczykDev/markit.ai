@@ -331,8 +331,10 @@ export function VoiceOrb() {
           if (!toolActiveRef.current) setState('thinking')
         } else if (message.type === 'markit.status') {
           if (message.status === 'searching') setState('searching')
+          else if (message.status === 'validating') setState('validating')
           else if (message.status === 'thinking') setState('thinking')
           else if (message.status === 'search-error') setState('search-error')
+          else if (message.status === 'validation-error') setState('validation-error')
         } else if (message.type === 'markit.tool') {
           if (message.phase === 'waiting' && message.call_id) {
             pendingToolCallRef.current = message.call_id
@@ -344,7 +346,13 @@ export function VoiceOrb() {
             toolActiveRef.current = message.phase === 'started'
           }
           if (message.phase === 'started') {
-            setState(message.tool === 'search_products' ? 'searching' : 'thinking')
+            setState(
+              message.tool === 'search_products'
+                ? 'searching'
+                : message.tool === 'validate_product_results'
+                  ? 'validating'
+                  : 'thinking',
+            )
           }
         } else if (message.type === 'markit.products') {
           if (message.action === 'show' && message.products?.length) {

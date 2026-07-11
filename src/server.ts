@@ -12,7 +12,11 @@ import {
   saveListingsInputSchema,
   searchProducts,
 } from './product-agent'
-import { analyzeProductListings } from './product-analysis'
+import {
+  analyzeProductListings,
+  productValidationInputSchema,
+  type ValidationContext,
+} from './product-analysis'
 import type { ProductCardData, ProductSortMode } from './product-types'
 import { handleSavedListingsRequest, saveListings } from './saved-listings'
 
@@ -49,7 +53,9 @@ type RealtimeToolCall = {
 type ProductSessionState = {
   latestProducts: ProductCardData[]
   visibleProductUrls: string[]
-  analysisGeneration: number
+  validationGeneration: number
+  validatedProductUrls: string[]
+  latestValidationContext: Pick<ValidationContext, 'requirements' | 'maxPrice' | 'currency'> | null
 }
 
 type ShopperContext = { userId: string | null }
@@ -78,7 +84,6 @@ async function executeAgentTool(
   upstream: WorkerWebSocket,
   client: WorkerWebSocket,
   state: ProductSessionState,
-  context: ExecutionContext,
   shopper: ShopperContext,
 ): Promise<void> {
   if (!call.call_id) return
@@ -92,17 +97,12 @@ async function executeAgentTool(
       const result = await searchProducts(input, env.EXA_API_KEY)
       state.latestProducts = result.products
       state.visibleProductUrls = []
-      state.analysisGeneration += 1
-      const generation = state.analysisGeneration
-      if (env.OPENAI_API_KEY && result.products.length) {
-        // Independent per-listing audits run in parallel and must never delay
-        // the voice reply; stale generations are dropped instead of cancelled.
-        context.waitUntil(
-          analyzeProductListings(result.products, env.OPENAI_API_KEY, (url, analysis) => {
-            if (state.analysisGeneration !== generation) return
-            sendJson(client, { type: 'markit.analysis', url, analysis })
-          }),
-        )
+      state.validatedProductUrls = []
+      state.validationGeneration += 1
+      state.latestValidationContext = {
+        requirements: input.query,
+        maxPrice: input.maxPrice,
+        currency: input.currency,
       }
       output = result
       sendJson(client, {
@@ -110,6 +110,54 @@ async function executeAgentTool(
         status: 'thinking',
         resultCount: result.products.length,
       })
+    } else if (call.name === 'validate_product_results') {
+      if (!env.OPENAI_API_KEY) throw new Error('Product validation is not configured')
+      if (!state.latestValidationContext) throw new Error('Product research is required first')
+      const input = productValidationInputSchema.parse(JSON.parse(call.arguments || '{}'))
+      const requested = new Set(input.productUrls)
+      const products = state.latestProducts.filter((product) => requested.has(product.url))
+      if (products.length !== requested.size) {
+        throw new Error('Only listings from the latest search can be validated')
+      }
+      const generation = state.validationGeneration
+      state.validatedProductUrls = []
+      sendJson(client, {
+        type: 'markit.status',
+        status: 'validating',
+        resultCount: products.length,
+      })
+      const analyses = await analyzeProductListings(
+        products,
+        { ...input, ...state.latestValidationContext },
+        env.OPENAI_API_KEY,
+        (url, analysis) => {
+          if (state.validationGeneration !== generation) return
+          sendJson(client, { type: 'markit.analysis', url, analysis })
+        },
+      )
+      const findings = products.map((product, index) => ({
+        url: product.url,
+        status: analyses[index]?.status ?? 'failed',
+        summary: analyses[index]?.summary,
+        decision: analyses[index]?.decision,
+        decisionReason: analyses[index]?.decisionReason,
+        missingInformation: analyses[index]?.missingInformation,
+        allInCost: analyses[index]?.allInCost,
+        checks: analyses[index]?.checks ?? [],
+      }))
+      state.validatedProductUrls = products.flatMap((product, index) =>
+        analyses[index]?.decision === 'present_match' ||
+        analyses[index]?.decision === 'propose_alternatives'
+          ? [product.url]
+          : [],
+      )
+      output = {
+        validationCompleted: true,
+        validatedCount: analyses.filter((analysis) => analysis.status === 'complete').length,
+        failedCount: analyses.filter((analysis) => analysis.status === 'failed').length,
+        findings,
+      }
+      sendJson(client, { type: 'markit.status', status: 'thinking' })
     } else if (call.name === 'control_product_display') {
       const input = productDisplayInputSchema.parse(JSON.parse(call.arguments || '{}'))
       if (input.action === 'close') {
@@ -118,7 +166,14 @@ async function executeAgentTool(
       } else {
         const view = input.view
         const sort = input.sort
-        const requested = new Set(input.productUrls ?? state.visibleProductUrls)
+        if (!state.validatedProductUrls.length) {
+          throw new Error('Product validation is required before display')
+        }
+        const validated = new Set(state.validatedProductUrls)
+        if (input.productUrls?.some((url) => !validated.has(url))) {
+          throw new Error('Only independently validated products can be displayed')
+        }
+        const requested = new Set(input.productUrls ?? state.validatedProductUrls)
         const explicitlyOrdered = input.productUrls?.flatMap((url) => {
           const product = state.latestProducts.find((candidate) => candidate.url === url)
           return product ? [product] : []
@@ -173,8 +228,12 @@ async function executeAgentTool(
     }
     if (call.name === 'search_products') {
       state.latestProducts = []
-      state.analysisGeneration += 1
+      state.validatedProductUrls = []
+      state.latestValidationContext = null
+      state.validationGeneration += 1
       sendJson(client, { type: 'markit.status', status: 'search-error' })
+    } else if (call.name === 'validate_product_results') {
+      sendJson(client, { type: 'markit.status', status: 'validation-error' })
     }
   }
 
@@ -235,7 +294,9 @@ async function realtimeSocket(
   const productState: ProductSessionState = {
     latestProducts: [],
     visibleProductUrls: [],
-    analysisGeneration: 0,
+    validationGeneration: 0,
+    validatedProductUrls: [],
+    latestValidationContext: null,
   }
   const toolReadyResolvers = new Map<string, () => void>()
   const waitForToolReady = (callId: string) =>
@@ -289,6 +350,7 @@ async function realtimeSocket(
       if (
         message.type === 'response.function_call_arguments.done' &&
         (message.name === 'search_products' ||
+          message.name === 'validate_product_results' ||
           message.name === 'control_product_display' ||
           message.name === 'save_product_listings') &&
         message.call_id &&
@@ -304,7 +366,7 @@ async function realtimeSocket(
         })
         context.waitUntil(
           ready.then(() =>
-            executeAgentTool(message, env, upstream, server, productState, context, {
+            executeAgentTool(message, env, upstream, server, productState, {
               userId: authSession?.user.id ?? null,
             }),
           ),
