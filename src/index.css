@@ -475,6 +475,73 @@ button {
   -webkit-line-clamp: 2;
 }
 
+.product-analysis {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  padding: 0.34rem 0.45rem;
+  border-radius: 0.65rem;
+  background: rgba(24, 24, 27, 0.025);
+}
+
+.product-analysis > span {
+  color: rgba(38, 37, 43, 0.42);
+  font-size: 0.54rem;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.product-analysis small {
+  overflow: hidden;
+  color: rgba(38, 37, 43, 0.45);
+  font-size: 0.58rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-analysis[data-state='pending'] small {
+  animation: analysis-pulse 1.6s ease-in-out infinite;
+}
+
+.product-analysis ul {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  gap: 0.55rem;
+  list-style: none;
+}
+
+.product-analysis li {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: rgba(38, 37, 43, 0.6);
+  font-size: 0.58rem;
+  font-weight: 600;
+}
+
+.product-analysis li::before {
+  width: 0.32rem;
+  height: 0.32rem;
+  flex: none;
+  border-radius: 50%;
+  content: '';
+  background: rgba(38, 37, 43, 0.28);
+}
+
+.product-analysis li[data-verdict='clear']::before {
+  background: #3c8569;
+}
+
+.product-analysis li[data-verdict='caution']::before {
+  background: #a06b42;
+}
+
 .product-footer {
   display: flex !important;
   margin-top: auto;
@@ -561,6 +628,12 @@ button {
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
 }
 
+@keyframes analysis-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
 @keyframes drift {
   to {
     transform: rotate(1turn);
@@ -618,7 +691,8 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .orb-halo,
   .orb-shell,
-  .orb-shell::before {
+  .orb-shell::before,
+  .product-analysis[data-state='pending'] small {
     animation: none !important;
   }
 }

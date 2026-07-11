@@ -1,3 +1,19 @@
+export type AnalysisVerdict = 'clear' | 'caution' | 'unverified'
+
+export type ProductCheck = {
+  id: 'price' | 'offer' | 'seller'
+  label: string
+  verdict: AnalysisVerdict
+  note: string
+}
+
+export type ProductAnalysis = {
+  status: 'complete' | 'failed'
+  model: string
+  summary?: string
+  checks: ProductCheck[]
+}
+
 export type ProductCardData = {
   title: string
   url: string

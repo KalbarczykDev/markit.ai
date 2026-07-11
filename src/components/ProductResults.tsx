@@ -1,7 +1,7 @@
 import { Card, Drawer, Link } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
-import type { ProductCardData } from '@/product-types'
+import type { ProductAnalysis, ProductCardData } from '@/product-types'
 
 function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(false)
@@ -17,7 +17,51 @@ function useIsMobile(): boolean {
   return isMobile
 }
 
-function ProductCards({ products }: { products: ProductCardData[] }) {
+function AnalysisChecks({ analysis }: { analysis: ProductAnalysis | undefined }) {
+  if (!analysis) {
+    return (
+      <div className="product-analysis" data-state="pending" role="status">
+        <span>Independent checks</span>
+        <small>Auditing listing…</small>
+      </div>
+    )
+  }
+
+  if (analysis.status === 'failed') {
+    return (
+      <div className="product-analysis" data-state="failed">
+        <span>Independent checks</span>
+        <small>Unavailable for this listing</small>
+      </div>
+    )
+  }
+
+  return (
+    <div className="product-analysis" data-state="complete" title={analysis.summary}>
+      <span>Independent checks</span>
+      <ul aria-label={`Independent listing checks by ${analysis.model}`}>
+        {analysis.checks.map((check) => (
+          <li
+            key={check.id}
+            data-verdict={check.verdict}
+            title={`${check.verdict}: ${check.note}`}
+            aria-label={`${check.label} check ${check.verdict}. ${check.note}`}
+          >
+            {check.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function ProductCards({
+  products,
+  analyses,
+}: {
+  products: ProductCardData[]
+  analyses: Record<string, ProductAnalysis>
+}) {
   return (
     <div className="product-card-list">
       {products.map((product, index) => (
@@ -64,6 +108,7 @@ function ProductCards({ products }: { products: ProductCardData[] }) {
                 <p>{product.shipping || 'Cost not found in source'}</p>
               </div>
             </Card.Content>
+            <AnalysisChecks analysis={analyses[product.url]} />
             <Card.Footer className="product-footer">
               <div
                 className="seller-reliability"
@@ -100,10 +145,12 @@ export function ProductResults({
   isOpen,
   heading,
   products,
+  analyses,
 }: {
   isOpen: boolean
   heading: string
   products: ProductCardData[]
+  analyses: Record<string, ProductAnalysis>
 }) {
   const isMobile = useIsMobile()
   const hasProducts = isOpen && products.length > 0
@@ -118,7 +165,7 @@ export function ProductResults({
           </div>
           <small>{products.length} results</small>
         </div>
-        <ProductCards products={products} />
+        <ProductCards products={products} analyses={analyses} />
       </aside>
 
       {isMobile ? (
@@ -131,7 +178,7 @@ export function ProductResults({
                 <Drawer.Heading>{heading}</Drawer.Heading>
               </Drawer.Header>
               <Drawer.Body className="product-drawer-body">
-                <ProductCards products={products} />
+                <ProductCards products={products} analyses={analyses} />
               </Drawer.Body>
             </Drawer.Dialog>
           </Drawer.Content>

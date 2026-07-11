@@ -1,7 +1,7 @@
 import { Button, Spinner } from '@heroui/react'
 import { useEffect, useRef, useState } from 'react'
 
-import type { ProductCardData } from '@/product-types'
+import type { ProductAnalysis, ProductCardData } from '@/product-types'
 
 import { ProductResults } from './ProductResults'
 
@@ -40,6 +40,8 @@ type RealtimeMessage = {
   action?: 'show' | 'close'
   heading?: string
   products?: ProductCardData[]
+  url?: string
+  analysis?: ProductAnalysis
   response?: { id?: string }
 }
 
@@ -103,6 +105,7 @@ export function VoiceOrb() {
     heading: string
     products: ProductCardData[]
   }>({ isOpen: false, heading: 'Current picks', products: [] })
+  const [analyses, setAnalyses] = useState<Record<string, ProductAnalysis>>({})
   const socketRef = useRef<WebSocket | null>(null)
   const audioRef = useRef<AudioRuntime | null>(null)
   const orbRef = useRef<HTMLButtonElement>(null)
@@ -173,6 +176,7 @@ export function VoiceOrb() {
     setLevel(0)
     if (updateState && mountedRef.current) {
       setProductDisplay({ isOpen: false, heading: 'Current picks', products: [] })
+      setAnalyses({})
       setState('idle')
     }
   }
@@ -352,6 +356,12 @@ export function VoiceOrb() {
             })
           } else if (message.action === 'close') {
             setProductDisplay({ isOpen: false, heading: 'Current picks', products: [] })
+            setAnalyses({})
+          }
+        } else if (message.type === 'markit.analysis') {
+          const { url, analysis } = message
+          if (url && analysis) {
+            setAnalyses((previous) => ({ ...previous, [url]: analysis }))
           }
         } else if (message.type === 'response.done') {
           const responseId = message.response?.id
@@ -434,6 +444,7 @@ export function VoiceOrb() {
         isOpen={productDisplay.isOpen}
         heading={productDisplay.heading}
         products={productDisplay.products}
+        analyses={analyses}
       />
     </div>
   )

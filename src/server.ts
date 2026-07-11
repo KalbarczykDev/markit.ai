@@ -7,6 +7,7 @@ import {
   productSearchInputSchema,
   searchProducts,
 } from './product-agent'
+import { analyzeProductListings } from './product-analysis'
 import type { ProductCardData } from './product-types'
 
 type ExecutionContext = {
@@ -37,6 +38,7 @@ type RealtimeToolCall = {
 
 type ProductSessionState = {
   latestProducts: ProductCardData[]
+  analysisGeneration: number
 }
 
 function sendJson(socket: WorkerWebSocket, value: unknown): void {
@@ -49,6 +51,7 @@ async function executeAgentTool(
   upstream: WorkerWebSocket,
   client: WorkerWebSocket,
   state: ProductSessionState,
+  context: ExecutionContext,
 ): Promise<void> {
   if (!call.call_id) return
   let output: unknown
@@ -59,6 +62,18 @@ async function executeAgentTool(
       sendJson(client, { type: 'markit.status', status: 'searching', query: input.query })
       const result = await searchProducts(input, env.EXA_API_KEY)
       state.latestProducts = result.products
+      state.analysisGeneration += 1
+      const generation = state.analysisGeneration
+      if (env.OPENAI_API_KEY && result.products.length) {
+        // Independent per-listing audits run in parallel and must never delay
+        // the voice reply; stale generations are dropped instead of cancelled.
+        context.waitUntil(
+          analyzeProductListings(result.products, env.OPENAI_API_KEY, (url, analysis) => {
+            if (state.analysisGeneration !== generation) return
+            sendJson(client, { type: 'markit.analysis', url, analysis })
+          }),
+        )
+      }
       output = result
       sendJson(client, {
         type: 'markit.status',
@@ -95,6 +110,7 @@ async function executeAgentTool(
     }
     if (call.name === 'search_products') {
       state.latestProducts = []
+      state.analysisGeneration += 1
       sendJson(client, { type: 'markit.status', status: 'search-error' })
     }
   }
@@ -149,7 +165,7 @@ async function realtimeSocket(
   const server = pair[1]
   server.accept()
   const handledToolCalls = new Set<string>()
-  const productState: ProductSessionState = { latestProducts: [] }
+  const productState: ProductSessionState = { latestProducts: [], analysisGeneration: 0 }
 
   server.addEventListener('message', (event) => {
     if (typeof event.data !== 'string') return
@@ -187,7 +203,7 @@ async function realtimeSocket(
         !handledToolCalls.has(message.call_id)
       ) {
         handledToolCalls.add(message.call_id)
-        context.waitUntil(executeAgentTool(message, env, upstream, server, productState))
+        context.waitUntil(executeAgentTool(message, env, upstream, server, productState, context))
       }
     } catch {}
   })
