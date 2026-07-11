@@ -1,3 +1,4 @@
+import { ChevronDown } from '@gravity-ui/icons'
 import { Avatar, Button, Dropdown, Spinner } from '@heroui/react'
 import { useNavigate } from '@tanstack/react-router'
 import {
@@ -252,14 +253,7 @@ export function AccountBar() {
                   <strong>{profile.name}</strong>
                 </span>
                 <span aria-hidden="true" className="account-chevron">
-                  <svg viewBox="0 0 12 12" fill="none">
-                    <path
-                      d="m3 4.75 3 3 3-3"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <ChevronDown />
                 </span>
               </Dropdown.Trigger>
               <Dropdown.Popover placement="bottom end" className="account-popover">

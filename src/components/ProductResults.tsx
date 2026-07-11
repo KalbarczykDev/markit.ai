@@ -1,3 +1,4 @@
+import { ArrowUpRightFromSquare } from '@gravity-ui/icons'
 import { Button, Card, Chip, Disclosure, Drawer, Link, Meter } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
@@ -256,7 +257,7 @@ function ProductCards({
                 aria-label={`View ${product.title} at ${product.source}`}
               >
                 View product
-                <Link.Icon aria-hidden="true" />
+                <ArrowUpRightFromSquare aria-hidden="true" />
               </Link>
             </Card.Footer>
           </div>
@@ -332,7 +333,7 @@ function ProductTable({
               <td>
                 <Link href={product.url} target="_blank" rel="noopener noreferrer">
                   {product.source}
-                  <Link.Icon aria-hidden="true" />
+                  <ArrowUpRightFromSquare aria-hidden="true" />
                 </Link>
               </td>
             </tr>

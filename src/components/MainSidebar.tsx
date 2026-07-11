@@ -1,51 +1,15 @@
+import { Bookmark, ChevronsLeft, ChevronsRight, Microphone, Person } from '@gravity-ui/icons'
 import { Button } from '@heroui/react'
 import { useNavigate } from '@tanstack/react-router'
 
 import { useAccount } from '@/account'
 
-type SidebarIconProps = { name: 'assistant' | 'listings' | 'profile' }
-
-function SidebarIcon({ name }: SidebarIconProps) {
-  if (name === 'assistant') {
-    return (
-      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path
-          d="M10 2.5v15M6.5 6v8M13.5 5v10M3 8v4M17 8v4"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-      </svg>
-    )
-  }
-
-  if (name === 'listings') {
-    return (
-      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path
-          d="M5 3.5h10v13l-5-3-5 3v-13Z"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
-      </svg>
-    )
-  }
-
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <circle cx="10" cy="6.5" r="3" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M4 17c.4-3.2 2.4-5 6-5s5.6 1.8 6 5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
+type MainSidebarProps = {
+  isCollapsed: boolean
+  onCollapsedChange: (isCollapsed: boolean) => void
 }
 
-export function MainSidebar() {
+export function MainSidebar({ isCollapsed, onCollapsedChange }: MainSidebarProps) {
   const navigate = useNavigate()
   const { profile } = useAccount()
 
@@ -53,10 +17,35 @@ export function MainSidebar() {
     void navigate({ to: profile ? to : '/login' })
   }
 
+  if (isCollapsed) {
+    return (
+      <Button
+        isIconOnly
+        variant="secondary"
+        className="sidebar-expand-button"
+        aria-label="Show sidebar"
+        onPress={() => onCollapsedChange(false)}
+      >
+        <ChevronsRight aria-hidden="true" />
+      </Button>
+    )
+  }
+
   return (
     <aside className="main-sidebar" aria-label="Main navigation">
       <nav className="main-sidebar-nav">
-        <span className="main-sidebar-label">Workspace</span>
+        <div className="main-sidebar-heading">
+          <span className="main-sidebar-label">Workspace</span>
+          <Button
+            isIconOnly
+            variant="ghost"
+            className="sidebar-collapse-button"
+            aria-label="Hide sidebar"
+            onPress={() => onCollapsedChange(true)}
+          >
+            <ChevronsLeft aria-hidden="true" />
+          </Button>
+        </div>
         <Button
           className="sidebar-link is-active"
           variant="ghost"
@@ -64,7 +53,7 @@ export function MainSidebar() {
           onPress={() => void navigate({ to: '/' })}
         >
           <span className="sidebar-link-icon">
-            <SidebarIcon name="assistant" />
+            <Microphone aria-hidden="true" />
           </span>
           <span>Assistant</span>
         </Button>
@@ -74,7 +63,7 @@ export function MainSidebar() {
           onPress={() => openAccountPage('/listings')}
         >
           <span className="sidebar-link-icon">
-            <SidebarIcon name="listings" />
+            <Bookmark aria-hidden="true" />
           </span>
           <span>Saved listings</span>
         </Button>
@@ -84,7 +73,7 @@ export function MainSidebar() {
           onPress={() => openAccountPage('/profile')}
         >
           <span className="sidebar-link-icon">
-            <SidebarIcon name="profile" />
+            <Person aria-hidden="true" />
           </span>
           <span>Profile & settings</span>
         </Button>

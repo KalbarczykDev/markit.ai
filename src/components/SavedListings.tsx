@@ -1,4 +1,5 @@
-import { Button, Card, Link, Spinner } from '@heroui/react'
+import { ArrowUpRightFromSquare } from '@gravity-ui/icons'
+import { Button, Link, Spinner } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
 import { downloadCsv } from '@/csv'
@@ -43,13 +44,11 @@ export function SavedListings() {
   }, [])
 
   return (
-    <Card className="settings-card saved-listings-card">
-      <Card.Header>
+    <section className="saved-listings">
+      <header className="saved-listings-header">
         <div>
-          <Card.Title>Saved listings</Card.Title>
-          <Card.Description>
-            Products saved from the shopping agent or results table.
-          </Card.Description>
+          <h2>Saved listings</h2>
+          <p>Products saved from the shopping agent or results table.</p>
         </div>
         <div className="saved-listings-actions">
           {status === 'ready' && listings.length ? (
@@ -64,8 +63,8 @@ export function SavedListings() {
             Export CSV
           </Button>
         </div>
-      </Card.Header>
-      <Card.Content>
+      </header>
+      <div className="saved-listings-content">
         {status === 'loading' ? (
           <div className="listings-state" role="status">
             <Spinner size="sm" /> Loading listings…
@@ -99,13 +98,13 @@ export function SavedListings() {
                   aria-label={`View ${listing.title}`}
                 >
                   View
-                  <Link.Icon aria-hidden="true" />
+                  <ArrowUpRightFromSquare aria-hidden="true" />
                 </Link>
               </article>
             ))}
           </div>
         )}
-      </Card.Content>
-    </Card>
+      </div>
+    </section>
   )
 }

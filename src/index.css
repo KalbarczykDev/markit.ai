@@ -130,6 +130,11 @@ button {
     calc(var(--stage-pad) + var(--sidebar-space));
   background:
     radial-gradient(circle at 50% 46%, var(--page-glow), transparent 34rem), var(--background);
+  transition: padding-left 240ms ease;
+}
+
+.voice-stage.sidebar-is-hidden {
+  --sidebar-space: 0rem;
 }
 
 .main-sidebar {
@@ -155,6 +160,13 @@ button {
   gap: 0.3rem;
 }
 
+.main-sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
 .main-sidebar-label {
   padding: 0.55rem 0.65rem 0.35rem;
   color: var(--text-muted);
@@ -162,6 +174,39 @@ button {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.sidebar-collapse-button,
+.sidebar-expand-button {
+  width: 2rem !important;
+  min-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  padding: 0 !important;
+  border-radius: 0.7rem !important;
+  color: var(--text-muted) !important;
+}
+
+.sidebar-collapse-button svg,
+.sidebar-expand-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.sidebar-collapse-button:hover,
+.sidebar-expand-button:hover {
+  color: var(--foreground) !important;
+}
+
+.sidebar-expand-button {
+  position: fixed !important;
+  z-index: 40;
+  top: 5.4rem;
+  left: 1.5rem;
+  border: 1px solid var(--border) !important;
+  background: color-mix(in srgb, var(--surface) 88%, transparent) !important;
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(20px);
 }
 
 .sidebar-link {
@@ -1246,8 +1291,9 @@ button {
     padding-left: var(--stage-pad);
   }
 
-  .main-sidebar {
-    display: none;
+  .main-sidebar,
+  .sidebar-expand-button {
+    display: none !important;
   }
 
   .commerce-agent,
