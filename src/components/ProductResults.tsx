@@ -181,10 +181,27 @@ function ProductCards({
                       <span aria-hidden="true">✓</span> Saved
                     </Chip>
                   ) : null}
-                  {product.price ? <strong>{product.price}</strong> : null}
                 </div>
               </div>
               <Card.Title className="product-title">{product.title}</Card.Title>
+              {product.price || product.discount ? (
+                <div className="product-price-row">
+                  {product.price ? (
+                    <strong className="product-price">{product.price}</strong>
+                  ) : null}
+                  {product.discount ? (
+                    <Chip
+                      size="sm"
+                      variant="soft"
+                      color="accent"
+                      className="product-discount-chip"
+                      title={product.discount}
+                    >
+                      {product.discount}
+                    </Chip>
+                  ) : null}
+                </div>
+              ) : null}
               {product.highlights[0] ? (
                 <Card.Description className="product-description">
                   {product.highlights[0]}
@@ -192,10 +209,6 @@ function ProductCards({
               ) : null}
             </Card.Header>
             <Card.Content className="product-offer-details">
-              <div data-verified={Boolean(product.discount)}>
-                <span>Discount</span>
-                <p>{product.discount || 'No verified discount found'}</p>
-              </div>
               <div data-verified={Boolean(product.shipping)}>
                 <span>Delivery</span>
                 <p>{product.shipping || 'Cost not found in source'}</p>
