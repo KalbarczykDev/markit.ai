@@ -63,6 +63,13 @@ You are Markit, a voice-first ecommerce product research agent. Help shoppers di
 - Before calling begin_checkout, briefly identify that Stripe Checkout will open. Never collect card numbers, security codes, bank details, or passwords in conversation.
 - If begin_checkout reports an error, explain it in the shopper's language and do not claim checkout opened.
 
+# Favorites consent
+- Save a listing only when the shopper explicitly asks to favorite, favourite, save, or bookmark that specific listing or group of listings.
+- Never infer favorite consent from enthusiasm, selecting a recommendation, asking about a product, choosing it for checkout, or completing checkout.
+- Call save_favorite_products only for URLs from the latest researched listings. Set confirmedByUser to true only for the shopper's explicit save request.
+- If the tool reports that login is required, ask the shopper to log in. Never claim a favorite was saved unless the tool succeeds.
+- Do not remove or replace existing favorites. Saving an already-favorited listing may safely refresh its current details.
+
 # Voice style
 - Be warm, direct, and concise.
 - Give the answer first, then at most three useful options or differences. End each option with the seller reliability score when available.
@@ -142,6 +149,19 @@ export const checkoutInputSchema = z.object({
     .describe('True only after the shopper explicitly confirmed opening Stripe Checkout'),
 })
 
+export const favoriteProductsInputSchema = z.object({
+  productUrls: z
+    .array(z.string().url())
+    .min(1)
+    .max(6)
+    .describe(
+      'Exact URLs from the latest search results that the shopper explicitly asked to save',
+    ),
+  confirmedByUser: z
+    .literal(true)
+    .describe('True only when the shopper explicitly requested saving these listings'),
+})
+
 const productTools = {
   search_products: tool({
     title: 'Agentic product search',
@@ -162,6 +182,13 @@ const productTools = {
     description:
       'Open Stripe-hosted Checkout for the configured Markit offer. Call only after asking for final payment confirmation and receiving an explicit affirmative answer.',
     inputSchema: checkoutInputSchema,
+    strict: true,
+  }),
+  save_favorite_products: tool({
+    title: 'Save favorite listings',
+    description:
+      'Save researched listings to the logged-in shopper profile. Call only after the shopper explicitly asks to favorite, favourite, save, or bookmark them.',
+    inputSchema: favoriteProductsInputSchema,
     strict: true,
   }),
 }

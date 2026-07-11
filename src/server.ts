@@ -1,9 +1,11 @@
 import handler from '@tanstack/react-start/server-entry'
 
-import { handleAuthRequest } from './auth'
+import { createAuth, handleAuthRequest } from './auth'
 import { handleBillingRequest, type BillingEnv } from './billing'
+import { handleFavoritesRequest, saveFavoriteListings } from './favorites'
 import {
   checkoutInputSchema,
+  favoriteProductsInputSchema,
   getProductToolDefinitions,
   productSystemPromptForCountry,
   productDisplayInputSchema,
@@ -44,7 +46,7 @@ type ProductSessionState = {
   analysisGeneration: number
 }
 
-type CheckoutContext = { origin: string; cookie: string }
+type ShopperContext = { origin: string; cookie: string; userId: string | null }
 
 function sendJson(socket: WorkerWebSocket, value: unknown): void {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(value))
@@ -57,7 +59,7 @@ async function executeAgentTool(
   client: WorkerWebSocket,
   state: ProductSessionState,
   context: ExecutionContext,
-  checkoutContext: CheckoutContext,
+  shopper: ShopperContext,
 ): Promise<void> {
   if (!call.call_id) return
   let output: unknown
@@ -110,9 +112,9 @@ async function executeAgentTool(
     } else if (call.name === 'begin_checkout') {
       checkoutInputSchema.parse(JSON.parse(call.arguments || '{}'))
       const checkoutResponse = await handleBillingRequest(
-        new Request(`${checkoutContext.origin}/api/billing/checkout`, {
+        new Request(`${shopper.origin}/api/billing/checkout`, {
           method: 'POST',
-          headers: { cookie: checkoutContext.cookie, origin: checkoutContext.origin },
+          headers: { cookie: shopper.cookie, origin: shopper.origin },
         }),
         env,
       )
@@ -125,6 +127,24 @@ async function executeAgentTool(
       } else {
         sendJson(client, { type: 'markit.checkout', url: checkout.url })
         output = { checkoutOpened: true, destination: 'Stripe-hosted Checkout' }
+      }
+    } else if (call.name === 'save_favorite_products') {
+      const input = favoriteProductsInputSchema.parse(JSON.parse(call.arguments || '{}'))
+      if (!shopper.userId || !env.DB) {
+        output = { saved: false, error: 'Login is required to save favorite listings.' }
+      } else {
+        const requested = new Set(input.productUrls)
+        const products = state.latestProducts.filter((product) => requested.has(product.url))
+        if (products.length !== requested.size) {
+          output = {
+            saved: false,
+            error: 'Favorites can only be saved from the latest researched listings.',
+          }
+        } else {
+          const favorites = await saveFavoriteListings(env.DB, shopper.userId, products)
+          sendJson(client, { type: 'markit.favorites', favorites })
+          output = { saved: true, favoriteCount: favorites.length }
+        }
       }
     } else {
       return
@@ -171,6 +191,8 @@ async function realtimeSocket(
 
   const toolDefinitions = await getProductToolDefinitions()
   const productSystemPrompt = productSystemPromptForCountry(request.headers.get('cf-ipcountry'))
+  const auth = createAuth(request, env)
+  const authSession = auth ? await auth.api.getSession({ headers: request.headers }) : null
 
   const openAIResponse = (await fetch('https://api.openai.com/v1/realtime?model=gpt-realtime-2.1', {
     headers: {
@@ -226,7 +248,8 @@ async function realtimeSocket(
         message.type === 'response.function_call_arguments.done' &&
         (message.name === 'search_products' ||
           message.name === 'control_product_display' ||
-          message.name === 'begin_checkout') &&
+          message.name === 'begin_checkout' ||
+          message.name === 'save_favorite_products') &&
         message.call_id &&
         !handledToolCalls.has(message.call_id)
       ) {
@@ -235,6 +258,7 @@ async function realtimeSocket(
           executeAgentTool(message, env, upstream, server, productState, context, {
             origin,
             cookie: request.headers.get('cookie') ?? '',
+            userId: authSession?.user.id ?? null,
           }),
         )
       }
@@ -263,6 +287,7 @@ export default {
     if (url.pathname === '/api/realtime') return realtimeSocket(request, env, context)
     if (url.pathname.startsWith('/api/auth/')) return handleAuthRequest(request, env)
     if (url.pathname.startsWith('/api/billing/')) return handleBillingRequest(request, env)
+    if (url.pathname === '/api/favorites') return handleFavoritesRequest(request, env)
     return startFetch(request, env, context)
   },
 }

@@ -14,6 +14,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent } from 'react'
 
 import { type ThemePreference, useAccount } from '@/account'
+import { FavoriteListings } from '@/components/FavoriteListings'
 
 export const Route = createFileRoute('/profile')({ component: ProfilePage })
 
@@ -283,6 +284,7 @@ function ProfilePage() {
 
           <div className="profile-settings">
             <BillingCard />
+            <FavoriteListings />
 
             <Card className="settings-card">
               <Card.Header>
