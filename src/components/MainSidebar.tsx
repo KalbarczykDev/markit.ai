@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 
 import { useAccount } from '@/account'
 
-type SidebarIconProps = { name: 'assistant' | 'favorites' | 'profile' }
+type SidebarIconProps = { name: 'assistant' | 'listings' | 'profile' }
 
 function SidebarIcon({ name }: SidebarIconProps) {
   if (name === 'assistant') {
@@ -19,11 +19,11 @@ function SidebarIcon({ name }: SidebarIconProps) {
     )
   }
 
-  if (name === 'favorites') {
+  if (name === 'listings') {
     return (
       <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
         <path
-          d="m10 15.7-1.1-1C5 11.2 2.5 9 2.5 6.2A3.7 3.7 0 0 1 6.3 2.5c1.5 0 2.9.7 3.7 1.8a4.7 4.7 0 0 1 3.7-1.8 3.7 3.7 0 0 1 3.8 3.7c0 2.8-2.5 5-6.4 8.5l-1.1 1Z"
+          d="M5 3.5h10v13l-5-3-5 3v-13Z"
           stroke="currentColor"
           strokeWidth="1.5"
           strokeLinejoin="round"
@@ -49,7 +49,7 @@ export function MainSidebar() {
   const navigate = useNavigate()
   const { profile } = useAccount()
 
-  const openAccountPage = (to: '/favorites' | '/profile') => {
+  const openAccountPage = (to: '/listings' | '/profile') => {
     void navigate({ to: profile ? to : '/login' })
   }
 
@@ -71,12 +71,12 @@ export function MainSidebar() {
         <Button
           className="sidebar-link"
           variant="ghost"
-          onPress={() => openAccountPage('/favorites')}
+          onPress={() => openAccountPage('/listings')}
         >
           <span className="sidebar-link-icon">
-            <SidebarIcon name="favorites" />
+            <SidebarIcon name="listings" />
           </span>
-          <span>Favorites</span>
+          <span>Saved listings</span>
         </Button>
         <Button
           className="sidebar-link"

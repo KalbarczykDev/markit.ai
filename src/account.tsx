@@ -222,7 +222,7 @@ export function AccountBar() {
 
   const handleAction = (key: Key) => {
     if (key === 'profile') void navigate({ to: '/profile' })
-    if (key === 'favorites') void navigate({ to: '/favorites' })
+    if (key === 'listings') void navigate({ to: '/listings' })
     if (key === 'home') void navigate({ to: '/' })
     if (key === 'logout') {
       setIsLoggingOut(true)
@@ -275,8 +275,8 @@ export function AccountBar() {
                   <Dropdown.Item id="profile" textValue="Profile and settings">
                     Profile & settings
                   </Dropdown.Item>
-                  <Dropdown.Item id="favorites" textValue="Favorites">
-                    Favorites
+                  <Dropdown.Item id="listings" textValue="Saved listings">
+                    Saved listings
                   </Dropdown.Item>
                   <Dropdown.Item id="home" textValue="Voice assistant">
                     Voice assistant

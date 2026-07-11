@@ -3,11 +3,11 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 
 import { useAccount } from '@/account'
-import { FavoriteListings } from '@/components/FavoriteListings'
+import { SavedListings } from '@/components/SavedListings'
 
-export const Route = createFileRoute('/favorites')({ component: FavoritesPage })
+export const Route = createFileRoute('/listings')({ component: ListingsPage })
 
-function FavoritesPage() {
+function ListingsPage() {
   const navigate = useNavigate()
   const { profile, isLoading } = useAccount()
 
@@ -16,12 +16,12 @@ function FavoritesPage() {
   }, [isLoading, navigate, profile])
 
   if (isLoading || !profile) {
-    return <main className="profile-stage" aria-label="Loading favorites" />
+    return <main className="profile-stage" aria-label="Loading saved listings" />
   }
 
   return (
     <main className="profile-stage">
-      <div className="profile-shell favorites-shell">
+      <div className="profile-shell listings-shell">
         <Button
           variant="ghost"
           size="sm"
@@ -31,10 +31,10 @@ function FavoritesPage() {
           <span aria-hidden="true">←</span> Back to assistant
         </Button>
 
-        <section className="profile-intro" aria-labelledby="favorites-title">
+        <section className="profile-intro" aria-labelledby="listings-title">
           <div>
             <span className="eyebrow">Your collection</span>
-            <h1 id="favorites-title">Favorites</h1>
+            <h1 id="listings-title">Saved listings</h1>
             <p>Revisit the products you asked Markit to save while you were shopping.</p>
           </div>
           <Chip color="success" variant="soft" size="sm">
@@ -42,7 +42,7 @@ function FavoritesPage() {
           </Chip>
         </section>
 
-        <FavoriteListings />
+        <SavedListings />
       </div>
     </main>
   )

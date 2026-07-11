@@ -1,7 +1,6 @@
 import { Button, Spinner } from '@heroui/react'
 import { useEffect, useRef, useState } from 'react'
 
-import type { FavoriteListing } from '@/favorite-types'
 import type {
   ProductAnalysis,
   ProductCardData,
@@ -9,6 +8,7 @@ import type {
   ProductViewMode,
 } from '@/product-types'
 import { INPUT_RATE, base64ToPcm, bytesToBase64, floatToPcm16, resample } from '@/realtime-audio'
+import type { SavedListing } from '@/saved-listing-types'
 
 import { ProductResults } from './ProductResults'
 
@@ -50,7 +50,7 @@ type RealtimeMessage = {
   products?: ProductCardData[]
   view?: ProductViewMode
   sort?: ProductSortMode
-  favorites?: FavoriteListing[]
+  listings?: SavedListing[]
   url?: string
   analysis?: ProductAnalysis
   phase?: 'waiting' | 'started' | 'completed'
@@ -79,7 +79,7 @@ export function VoiceOrb() {
     sort: ProductSortMode
   }>({ isOpen: false, heading: 'Current picks', products: [], view: 'list', sort: 'relevance' })
   const [analyses, setAnalyses] = useState<Record<string, ProductAnalysis>>({})
-  const [favoritedUrls, setFavoritedUrls] = useState<ReadonlySet<string>>(new Set())
+  const [savedUrls, setSavedUrls] = useState<ReadonlySet<string>>(new Set())
   const socketRef = useRef<WebSocket | null>(null)
   const audioRef = useRef<AudioRuntime | null>(null)
   const orbRef = useRef<HTMLButtonElement>(null)
@@ -384,10 +384,10 @@ export function VoiceOrb() {
           if (url && analysis) {
             setAnalyses((previous) => ({ ...previous, [url]: analysis }))
           }
-        } else if (message.type === 'markit.favorites' && message.favorites?.length) {
-          setFavoritedUrls((previous) => {
+        } else if (message.type === 'markit.listings' && message.listings?.length) {
+          setSavedUrls((previous) => {
             const updated = new Set(previous)
-            for (const favorite of message.favorites ?? []) updated.add(favorite.url)
+            for (const listing of message.listings ?? []) updated.add(listing.url)
             return updated
           })
         } else if (message.type === 'response.done') {
@@ -473,7 +473,7 @@ export function VoiceOrb() {
         heading={productDisplay.heading}
         products={productDisplay.products}
         analyses={analyses}
-        favoritedUrls={favoritedUrls}
+        savedUrls={savedUrls}
         view={productDisplay.view}
         sort={productDisplay.sort}
       />

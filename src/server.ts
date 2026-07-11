@@ -1,17 +1,17 @@
 import handler from '@tanstack/react-start/server-entry'
 
 import { createAuth, handleAuthRequest, type AuthEnv } from './auth'
-import { handleFavoritesRequest, saveFavoriteListings } from './favorites'
 import {
-  favoriteProductsInputSchema,
   getProductToolDefinitions,
   productSystemPromptForCountry,
   productDisplayInputSchema,
   productSearchInputSchema,
+  saveListingsInputSchema,
   searchProducts,
 } from './product-agent'
 import { analyzeProductListings } from './product-analysis'
 import type { ProductCardData, ProductSortMode } from './product-types'
+import { handleSavedListingsRequest, saveListings } from './saved-listings'
 
 type ExecutionContext = {
   waitUntil(promise: Promise<unknown>): void
@@ -130,25 +130,25 @@ async function executeAgentTool(
         })
         output = { displayed: true, productCount: products.length, view, sort }
       }
-    } else if (call.name === 'save_favorite_products') {
-      const input = favoriteProductsInputSchema.parse(JSON.parse(call.arguments || '{}'))
+    } else if (call.name === 'save_product_listings') {
+      const input = saveListingsInputSchema.parse(JSON.parse(call.arguments || '{}'))
       if (!shopper.userId || !env.DB) {
-        output = { saved: false, error: 'Login is required to save favorite listings.' }
+        output = { saved: false, error: 'Login is required to save product listings.' }
       } else {
         const requested = new Set(input.productUrls)
         const products = state.latestProducts.filter((product) => requested.has(product.url))
         if (products.length !== requested.size) {
           output = {
             saved: false,
-            error: 'Favorites can only be saved from the latest researched listings.',
+            error: 'Only products from the latest researched listings can be saved.',
           }
         } else {
-          const favorites = await saveFavoriteListings(env.DB, shopper.userId, products)
-          sendJson(client, { type: 'markit.favorites', favorites })
+          const listings = await saveListings(env.DB, shopper.userId, products)
+          sendJson(client, { type: 'markit.listings', listings })
           output = {
             saved: true,
-            favoriteCount: favorites.length,
-            location: 'Account → Favorites',
+            savedCount: listings.length,
+            location: 'Account → Saved listings',
           }
         }
       }
@@ -278,7 +278,7 @@ async function realtimeSocket(
         message.type === 'response.function_call_arguments.done' &&
         (message.name === 'search_products' ||
           message.name === 'control_product_display' ||
-          message.name === 'save_favorite_products') &&
+          message.name === 'save_product_listings') &&
         message.call_id &&
         !handledToolCalls.has(message.call_id)
       ) {
@@ -324,7 +324,7 @@ export default {
     const url = new URL(request.url)
     if (url.pathname === '/api/realtime') return realtimeSocket(request, env, context)
     if (url.pathname.startsWith('/api/auth/')) return handleAuthRequest(request, env)
-    if (url.pathname === '/api/favorites') return handleFavoritesRequest(request, env)
+    if (url.pathname === '/api/listings') return handleSavedListingsRequest(request, env)
     return startFetch(request, env, context)
   },
 }

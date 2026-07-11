@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as FavoritesRouteImport } from './routes/favorites'
+import { Route as ListingsRouteImport } from './routes/listings'
 import { Route as IndexRouteImport } from './routes/index'
 
 const ProfileRoute = ProfileRouteImport.update({
@@ -24,9 +24,9 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FavoritesRoute = FavoritesRouteImport.update({
-  id: '/favorites',
-  path: '/favorites',
+const ListingsRoute = ListingsRouteImport.update({
+  id: '/listings',
+  path: '/listings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,34 +37,34 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/favorites': typeof FavoritesRoute
+  '/listings': typeof ListingsRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/favorites': typeof FavoritesRoute
+  '/listings': typeof ListingsRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/favorites': typeof FavoritesRoute
+  '/listings': typeof ListingsRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/favorites' | '/login' | '/profile'
+  fullPaths: '/' | '/listings' | '/login' | '/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/favorites' | '/login' | '/profile'
-  id: '__root__' | '/' | '/favorites' | '/login' | '/profile'
+  to: '/' | '/listings' | '/login' | '/profile'
+  id: '__root__' | '/' | '/listings' | '/login' | '/profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  FavoritesRoute: typeof FavoritesRoute
+  ListingsRoute: typeof ListingsRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
 }
@@ -85,11 +85,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/favorites': {
-      id: '/favorites'
-      path: '/favorites'
-      fullPath: '/favorites'
-      preLoaderRoute: typeof FavoritesRouteImport
+    '/listings': {
+      id: '/listings'
+      path: '/listings'
+      fullPath: '/listings'
+      preLoaderRoute: typeof ListingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -104,7 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  FavoritesRoute: FavoritesRoute,
+  ListingsRoute: ListingsRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
 }

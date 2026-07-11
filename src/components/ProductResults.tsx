@@ -1,4 +1,4 @@
-import { Card, Chip, Disclosure, Drawer, Link, Meter } from '@heroui/react'
+import { Button, Card, Chip, Disclosure, Drawer, Link, Meter } from '@heroui/react'
 import { useEffect, useState } from 'react'
 
 import type {
@@ -142,12 +142,12 @@ function AnalysisChecks({ analysis }: { analysis: ProductAnalysis | undefined })
 function ProductCards({
   products,
   analyses,
-  favoritedUrls,
+  savedUrls,
   view,
 }: {
   products: ProductCardData[]
   analyses: Record<string, ProductAnalysis>
-  favoritedUrls: ReadonlySet<string>
+  savedUrls: ReadonlySet<string>
   view: Exclude<ProductViewMode, 'table'>
 }) {
   return (
@@ -178,7 +178,7 @@ function ProductCards({
               <div className="product-source-row">
                 <span>{product.source}</span>
                 <div className="product-source-meta">
-                  {favoritedUrls.has(product.url) ? (
+                  {savedUrls.has(product.url) ? (
                     <Chip
                       color="success"
                       variant="soft"
@@ -267,12 +267,41 @@ const SORT_LABELS: Record<ProductSortMode, string> = {
   reliability_desc: 'Seller reliability',
 }
 
+function csvCell(value: string | number | undefined): string {
+  const text = value === undefined ? '' : String(value)
+  return `"${text.replaceAll('"', '""')}"`
+}
+
+function saveProductsCsv(products: ProductCardData[]) {
+  const rows = [
+    ['Product', 'Price', 'Currency', 'Delivery', 'Reliability', 'Retailer', 'URL'],
+    ...products.map((product) => [
+      product.title,
+      product.price,
+      product.priceCurrency,
+      product.shipping,
+      product.sellerReliability.score,
+      product.source,
+      product.url,
+    ]),
+  ]
+  const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = 'markit-listings.csv'
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
+
 function ProductTable({
   products,
-  favoritedUrls,
+  savedUrls,
 }: {
   products: ProductCardData[]
-  favoritedUrls: ReadonlySet<string>
+  savedUrls: ReadonlySet<string>
 }) {
   return (
     <div className="product-table-wrap">
@@ -294,7 +323,7 @@ function ProductTable({
                   {product.image ? <img src={product.image} alt="" loading="lazy" /> : null}
                   <span>
                     <strong>{product.title}</strong>
-                    {favoritedUrls.has(product.url) ? <small>✓ Saved</small> : null}
+                    {savedUrls.has(product.url) ? <small>✓ Saved</small> : null}
                   </span>
                 </div>
               </th>
@@ -321,27 +350,43 @@ function ProductTable({
 function ProductPresentation({
   products,
   analyses,
-  favoritedUrls,
+  savedUrls,
   view,
   sort,
+  onSaveListings,
+  saveState,
 }: {
   products: ProductCardData[]
   analyses: Record<string, ProductAnalysis>
-  favoritedUrls: ReadonlySet<string>
+  savedUrls: ReadonlySet<string>
   view: ProductViewMode
   sort: ProductSortMode
+  onSaveListings: () => void
+  saveState: 'idle' | 'saving' | 'saved' | 'error'
 }) {
   return (
     <div className="product-arrangement" key={`${view}-${sort}`}>
       {view === 'table' ? (
-        <ProductTable products={products} favoritedUrls={favoritedUrls} />
+        <>
+          <div className="product-table-actions">
+            <span role="status" aria-live="polite">
+              {saveState === 'saved'
+                ? 'Saved under Account → Saved listings'
+                : saveState === 'error'
+                  ? 'Could not save listings. Log in and try again.'
+                  : ''}
+            </span>
+            <Button size="sm" variant="ghost" onPress={() => saveProductsCsv(products)}>
+              Save CSV
+            </Button>
+            <Button size="sm" isDisabled={saveState === 'saving'} onPress={onSaveListings}>
+              {saveState === 'saving' ? 'Saving…' : 'Save to listings'}
+            </Button>
+          </div>
+          <ProductTable products={products} savedUrls={savedUrls} />
+        </>
       ) : (
-        <ProductCards
-          products={products}
-          analyses={analyses}
-          favoritedUrls={favoritedUrls}
-          view={view}
-        />
+        <ProductCards products={products} analyses={analyses} savedUrls={savedUrls} view={view} />
       )}
     </div>
   )
@@ -352,7 +397,7 @@ export function ProductResults({
   heading,
   products,
   analyses,
-  favoritedUrls,
+  savedUrls,
   view,
   sort,
 }: {
@@ -360,12 +405,39 @@ export function ProductResults({
   heading: string
   products: ProductCardData[]
   analyses: Record<string, ProductAnalysis>
-  favoritedUrls: ReadonlySet<string>
+  savedUrls: ReadonlySet<string>
   view: ProductViewMode
   sort: ProductSortMode
 }) {
   const isMobile = useIsMobile()
   const hasProducts = isOpen && products.length > 0
+  const [locallySavedUrls, setLocallySavedUrls] = useState<ReadonlySet<string>>(new Set())
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const allSavedUrls = new Set([...savedUrls, ...locallySavedUrls])
+
+  useEffect(() => setSaveState('idle'), [products])
+
+  const saveToListings = async () => {
+    setSaveState('saving')
+    try {
+      const response = await fetch('/api/listings', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ products }),
+      })
+      if (!response.ok) throw new Error('Unable to save listings')
+      const body = (await response.json()) as { listings: Array<{ url: string }> }
+      setLocallySavedUrls((current) => {
+        const updated = new Set(current)
+        for (const listing of body.listings) updated.add(listing.url)
+        return updated
+      })
+      setSaveState('saved')
+    } catch {
+      setSaveState('error')
+    }
+  }
 
   return (
     <>
@@ -382,9 +454,11 @@ export function ProductResults({
         <ProductPresentation
           products={products}
           analyses={analyses}
-          favoritedUrls={favoritedUrls}
+          savedUrls={allSavedUrls}
           view={view}
           sort={sort}
+          onSaveListings={() => void saveToListings()}
+          saveState={saveState}
         />
       </aside>
 
@@ -401,9 +475,11 @@ export function ProductResults({
                 <ProductPresentation
                   products={products}
                   analyses={analyses}
-                  favoritedUrls={favoritedUrls}
+                  savedUrls={allSavedUrls}
                   view={view}
                   sort={sort}
+                  onSaveListings={() => void saveToListings()}
+                  saveState={saveState}
                 />
               </Drawer.Body>
             </Drawer.Dialog>
