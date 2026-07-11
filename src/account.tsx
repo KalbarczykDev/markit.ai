@@ -17,7 +17,6 @@ export type AccountProfile = {
   id: string
   name: string
   email: string
-  walletCents: number
   theme: ThemePreference
   offersEnabled: boolean
 }
@@ -40,7 +39,6 @@ type AuthUser = {
   id: string
   name: string
   email: string
-  walletCents?: number
   theme?: string
   offersEnabled?: boolean
 }
@@ -69,7 +67,6 @@ function accountProfile(user: AuthUser): AccountProfile {
     id: user.id,
     name: user.name,
     email: user.email,
-    walletCents: user.walletCents ?? 0,
     theme,
     offersEnabled: user.offersEnabled ?? true,
   }
@@ -222,9 +219,6 @@ export function AccountBar() {
   const navigate = useNavigate()
   const { profile, isLoading, logout } = useAccount()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const wallet = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-    (profile?.walletCents ?? 0) / 100,
-  )
 
   const handleAction = (key: Key) => {
     if (key === 'profile') void navigate({ to: '/profile' })
@@ -247,10 +241,6 @@ export function AccountBar() {
           </div>
         ) : profile ? (
           <>
-            <div className="wallet-pill" aria-label={`Wallet balance ${wallet}`}>
-              <span>Wallet</span>
-              <strong>{wallet}</strong>
-            </div>
             <Dropdown>
               <Dropdown.Trigger className="account-trigger" aria-label="Open account menu">
                 <Avatar size="sm" className="account-avatar">

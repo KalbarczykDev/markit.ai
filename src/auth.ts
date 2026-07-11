@@ -35,11 +35,6 @@ export function createAuth(request: Request, env: AuthEnv) {
     user: {
       changeEmail: { enabled: true },
       additionalFields: {
-        walletCents: {
-          type: 'number',
-          defaultValue: 0,
-          input: false,
-        },
         theme: {
           type: 'string',
           defaultValue: 'system',

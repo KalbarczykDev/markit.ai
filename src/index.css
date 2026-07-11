@@ -879,7 +879,6 @@ body {
   box-shadow: 0 8px 20px color-mix(in oklab, var(--accent) 32%, transparent);
 }
 
-.wallet-pill,
 .account-trigger {
   min-height: 2.8rem;
   border: 1px solid var(--border);
@@ -888,26 +887,12 @@ body {
   backdrop-filter: blur(18px);
 }
 
-.wallet-pill {
-  display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
-  padding: 0 0.9rem;
-  border-radius: 999px;
-}
-
-.wallet-pill span,
 .account-trigger-copy small {
   color: var(--text-muted);
   font-size: 0.62rem;
   font-weight: 650;
   letter-spacing: 0.055em;
   text-transform: uppercase;
-}
-
-.wallet-pill strong {
-  color: var(--foreground);
-  font-size: 0.78rem;
 }
 
 .account-trigger {
@@ -1086,7 +1071,6 @@ body {
 }
 
 .identity-card,
-.wallet-card,
 .settings-card {
   border: 1px solid var(--border) !important;
   border-radius: 1.35rem !important;
@@ -1115,56 +1099,6 @@ body {
   color: var(--text-muted);
   font-size: 0.68rem;
   line-height: 1.4;
-}
-
-.wallet-card {
-  padding: 1.25rem !important;
-  color: oklch(0.9601 0.0106 110.28) !important;
-  background:
-    radial-gradient(
-      circle at 82% -12%,
-      color-mix(in oklab, var(--accent) 38%, transparent),
-      transparent 42%
-    ),
-    linear-gradient(150deg, oklch(0.3 0.0435 131), oklch(0.17 0.0208 140.03)) !important;
-}
-
-.wallet-card .eyebrow {
-  color: rgba(255, 255, 255, 0.68);
-}
-
-.wallet-card > div:first-child {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  padding: 0 !important;
-}
-
-.wallet-card h3 {
-  margin-top: 0.4rem;
-  color: var(--accent);
-  font-size: 2rem;
-  font-weight: 650;
-  letter-spacing: -0.045em;
-}
-
-.wallet-card > p {
-  margin: 1.25rem 0 2.5rem;
-  color: rgba(255, 255, 255, 0.68) !important;
-  font-size: 0.72rem;
-  line-height: 1.5;
-}
-
-.wallet-card > div:last-child {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 !important;
-  color: rgba(255, 255, 255, 0.66);
-  font-size: 0.65rem;
-}
-
-.wallet-card > div:last-child strong {
-  color: var(--accent);
 }
 
 .settings-card {
@@ -1440,12 +1374,6 @@ body {
     height: 2rem;
   }
 
-  .wallet-pill {
-    min-height: 2.5rem;
-    padding: 0 0.7rem;
-  }
-
-  .wallet-pill span,
   .account-trigger-copy,
   .account-chevron {
     display: none;

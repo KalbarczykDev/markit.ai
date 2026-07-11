@@ -44,7 +44,7 @@ export function AuthScreen() {
         <div className="auth-copy">
           <span className="eyebrow">Welcome back</span>
           <h1 id="auth-title">Log in to Markit</h1>
-          <p>Access your wallet, preferences and personalized shopping profile.</p>
+          <p>Access your preferences and personalized shopping profile.</p>
         </div>
 
         <Card className="auth-card">

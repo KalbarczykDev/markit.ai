@@ -208,10 +208,6 @@ function ProfilePage() {
     }
   }, [isLoading, navigate, profile])
 
-  const wallet = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-    (profile?.walletCents ?? 0) / 100,
-  )
-
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
@@ -263,22 +259,6 @@ function ProfilePage() {
                   <p>{profile.email || 'Add an email to complete your profile'}</p>
                 </div>
               </Card.Content>
-            </Card>
-
-            <Card className="wallet-card">
-              <Card.Header>
-                <div>
-                  <span className="eyebrow">Markit wallet</span>
-                  <Card.Title>{wallet}</Card.Title>
-                </div>
-              </Card.Header>
-              <Card.Description>
-                Available credit for eligible purchases and rewards.
-              </Card.Description>
-              <Card.Footer>
-                <span>Wallet ID</span>
-                <strong>•••• {profile.id.slice(-4).toUpperCase()}</strong>
-              </Card.Footer>
             </Card>
           </aside>
 

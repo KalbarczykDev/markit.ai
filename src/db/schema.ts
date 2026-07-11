@@ -7,7 +7,6 @@ export const user = sqliteTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).default(false).notNull(),
   image: text('image'),
-  walletCents: integer('wallet_cents').default(0).notNull(),
   theme: text('theme').default('system').notNull(),
   offersEnabled: integer('offers_enabled', { mode: 'boolean' }).default(true).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
