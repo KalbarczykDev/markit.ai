@@ -25,6 +25,43 @@ type MessageRow = {
   created_at: number
 }
 
+let schemaReady: Promise<void> | undefined
+
+export function ensureConversationSchema(database: D1Database): Promise<void> {
+  schemaReady ??= database
+    .batch([
+      database.prepare(`CREATE TABLE IF NOT EXISTS conversation_session (
+        id TEXT PRIMARY KEY NOT NULL,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT 'New conversation',
+        product_state TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+      )`),
+      database.prepare(`CREATE INDEX IF NOT EXISTS conversation_session_user_updated_idx
+        ON conversation_session(user_id, updated_at DESC)`),
+      database.prepare(`CREATE TABLE IF NOT EXISTS conversation_message (
+        id TEXT PRIMARY KEY NOT NULL,
+        conversation_id TEXT NOT NULL,
+        realtime_item_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (conversation_id) REFERENCES conversation_session(id) ON DELETE CASCADE,
+        UNIQUE(conversation_id, realtime_item_id)
+      )`),
+      database.prepare(`CREATE INDEX IF NOT EXISTS conversation_message_conversation_created_idx
+        ON conversation_message(conversation_id, created_at)`),
+    ])
+    .then(() => undefined)
+    .catch((error: unknown) => {
+      schemaReady = undefined
+      throw error
+    })
+  return schemaReady
+}
+
 function summary(row: SessionRow): ConversationSummary {
   return {
     id: row.id,
@@ -193,6 +230,7 @@ This is the prior transcript for the selected saved conversation. Continue natur
 export async function handleConversationsRequest(request: Request, env: ConversationsEnv) {
   if (!env.DB)
     return Response.json({ message: 'Conversations are not configured.' }, { status: 503 })
+  await ensureConversationSchema(env.DB)
   const auth = createAuth(request, env)
   const session = auth ? await auth.api.getSession({ headers: request.headers }) : null
   if (!session?.user)
